@@ -16,6 +16,10 @@ Converts raw form values (strings from HTML forms or `FormData` objects) into pr
 
 ```bash
 npm install coerce-form-data
+# or
+pnpm add coerce-form-data
+# or
+yarn add coerce-form-data
 ```
 
 ## Quick Start

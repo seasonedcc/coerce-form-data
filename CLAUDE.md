@@ -5,21 +5,21 @@ This repository is a standalone TypeScript library that provides **zero-dependen
 ## Essential Commands
 
 ```bash
-npm run build       # Build ESM + CJS bundles with type declarations
-npm run dev         # Build in watch mode
-npm run test        # Run all tests with Vitest
-npm run lint        # Check code style with Biome
-npm run lint-fix    # Auto-fix linting and formatting issues
-npm run tsc         # Type-check
+pnpm run build       # Build ESM + CJS bundles with type declarations
+pnpm run dev         # Build in watch mode
+pnpm run test        # Run all tests with Vitest
+pnpm run lint        # Check code style with Biome
+pnpm run lint-fix    # Auto-fix linting and formatting issues
+pnpm run tsc         # Type-check
 ```
 
 ## Tooling
 
-- **Package manager:** `npm`.
+- **Package manager:** `pnpm`.
 - **Build:** `tsup` – outputs ESM (`dist/index.js`), CJS (`dist/index.cjs`), and type declarations.
 - **Testing:** Vitest. Tests live alongside source files in `src/` with `.test.ts` suffix.
-- **Linting & formatting:** [Biome](https://biomejs.dev). Check with `npm run lint` and auto-fix with `npm run lint-fix`.
-- **Type checking:** `npm run tsc`.
+- **Linting & formatting:** [Biome](https://biomejs.dev). Check with `pnpm run lint` and auto-fix with `pnpm run lint-fix`.
+- **Type checking:** `pnpm run tsc`.
 
 ### TypeScript Guidelines
 - **TYPE OVER INTERFACE**: Use `type` instead of `interface` when possible (prefer type aliases)
@@ -41,7 +41,7 @@ npm run tsc         # Type-check
   - Semicolons only when required (`semicolons: "asNeeded"`).
 - Avoid abbreviations when naming things.
 - Avoid Hasty Abstractions: it is OK to repeat things here and there until the right abstraction emerges.
-- Run `npm run lint-fix` before committing to ensure formatting and import ordering.
+- Run `pnpm run lint-fix` before committing to ensure formatting and import ordering.
 
 ## Fixing Bugs
 
@@ -53,7 +53,7 @@ When addressing a bug, follow a test-driven development approach:
 
 ## Definition of Done
 
-- A task is not done unless `npm run lint`, `npm run tsc`, and `npm run test` are all passing.
+- A task is not done unless `pnpm run lint`, `pnpm run tsc`, and `pnpm run test` are all passing.
 - A task is not done if it has leftover comments. ALWAYS remove leftover comments before finishing.
 
 ## Batch scripts and delegation to other agents
