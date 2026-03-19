@@ -8,6 +8,7 @@ export { FormDataCoercionError } from './form-data-coercion-error'
 export type {
   FieldType,
   FieldDescriptor,
+  FormDataLike,
   FormValue,
   FormRecord,
   FieldDescriptors,
