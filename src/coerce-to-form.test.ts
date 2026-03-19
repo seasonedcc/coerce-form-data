@@ -9,9 +9,9 @@ describe('coerceToForm', () => {
     expect(coerceToForm('', field)).toBe(false)
   })
 
-  it('formats dates as YYYY-MM-DD strings', () => {
+  it('formats dates as YYYY-MM-DD strings using local time', () => {
     const field: FieldDescriptor = { type: 'date' }
-    const date = new Date('2024-05-06T12:00:00Z')
+    const date = new Date(2024, 4, 6)
     expect(coerceToForm(date, field)).toBe('2024-05-06')
     expect(coerceToForm(undefined, field)).toBeUndefined()
   })
