@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { coerceFormData } from './coerce-form-data'
+import { FormDataCoercionError } from './form-data-coercion-error'
 import type { FieldDescriptors } from './types'
 
 const fields: FieldDescriptors = {
@@ -110,5 +111,14 @@ describe('coerceFormData', () => {
     })
 
     expect(result.tags).toEqual([])
+  })
+
+  it('throws when a required field has an invalid value', () => {
+    const fd = new FormData()
+    fd.set('count', 'not-a-number')
+
+    expect(() => coerceFormData(fd, { count: { type: 'number' } })).toThrow(
+      FormDataCoercionError
+    )
   })
 })

@@ -1,5 +1,6 @@
 import { coerceValue } from './coerce-value'
 import type {
+  CoercedFormData,
   FieldDescriptors,
   FieldType,
   FormRecord,
@@ -18,10 +19,14 @@ const arrayTypes: Set<FieldType> = new Set([
  * map of {@link FieldDescriptors}.
  *
  * Only the keys present in `fields` are included in the result.
+ * The returned object is fully typed when field descriptors are passed
+ * inline — each key maps to the JavaScript type declared by its
+ * {@link FieldDescriptor}.
  *
  * @param data - A web standard {@link FormData} or a plain key/value record
  * @param fields - Map of field names to their type descriptors
  * @returns A new object with every value coerced to its declared type
+ * @throws {FormDataCoercionError} When any value is invalid for its declared type
  *
  * @example
  * ```ts
@@ -47,11 +52,11 @@ const arrayTypes: Set<FieldType> = new Set([
  * // { agree: true, count: 5 }
  * ```
  */
-function coerceFormData(
+function coerceFormData<const F extends FieldDescriptors>(
   data: FormData | FormRecord,
-  fields: FieldDescriptors
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
+  fields: F
+): CoercedFormData<F> {
+  const result = {} as CoercedFormData<F>
 
   for (const key in fields) {
     const fieldType = fields[key].type
@@ -62,7 +67,10 @@ function coerceFormData(
           ? data.getAll(key)
           : data.get(key)
         : data[key]
-    result[key] = coerceValue(raw ?? null, fields[key])
+    ;(result as Record<string, unknown>)[key] = coerceValue(
+      raw ?? null,
+      fields[key]
+    )
   }
 
   return result

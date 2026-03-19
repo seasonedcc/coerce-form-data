@@ -1,6 +1,6 @@
 import { parseDate } from './parse-date'
 import { parseDatetime } from './parse-datetime'
-import type { FieldDescriptor } from './types'
+import type { CoercedToFormValue, FieldDescriptor } from './types'
 
 /**
  * Coerce a typed value into a representation suitable for HTML form inputs.
@@ -31,42 +31,48 @@ import type { FieldDescriptor } from './types'
  * // '2024-05-06T14:30:00'
  * ```
  */
-function coerceToForm(value: unknown, field: FieldDescriptor) {
+function coerceToForm<const F extends FieldDescriptor>(
+  value: unknown,
+  field: F
+): CoercedToFormValue<F> {
+  type Result = CoercedToFormValue<F>
   const { type } = field
 
   if (type === 'boolean') {
-    return Boolean(value) ?? false
+    return (Boolean(value) ?? false) as Result
   }
 
   if (type === 'date') {
-    return parseDate(value as Date | undefined)
+    return parseDate(value as Date | undefined) as Result
   }
 
   if (type === 'datetime') {
-    return parseDatetime(value as Date | undefined)
+    return parseDatetime(value as Date | undefined) as Result
   }
 
   if (type === 'enum' || type === 'string' || type === 'number') {
-    return String(value ?? '')
+    return String(value ?? '') as Result
   }
 
   if (type === 'string-array' || type === 'number-array') {
-    return Array.isArray(value) ? value.map(String) : []
+    return (Array.isArray(value) ? value.map(String) : []) as Result
   }
 
   if (type === 'date-array') {
-    return Array.isArray(value)
-      ? value.map((v: Date) => parseDate(v) as string)
-      : []
+    return (
+      Array.isArray(value) ? value.map((v: Date) => parseDate(v) as string) : []
+    ) as Result
   }
 
   if (type === 'datetime-array') {
-    return Array.isArray(value)
-      ? value.map((v: Date) => parseDatetime(v) as string)
-      : []
+    return (
+      Array.isArray(value)
+        ? value.map((v: Date) => parseDatetime(v) as string)
+        : []
+    ) as Result
   }
 
-  return value ?? ''
+  return (value ?? '') as Result
 }
 
 export { coerceToForm }

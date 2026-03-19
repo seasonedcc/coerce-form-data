@@ -8,9 +8,10 @@ Converts raw form values (strings from HTML forms or `FormData` objects) into pr
 
 - Zero dependencies
 - Works with web standard `FormData` and plain objects
-- Full TypeScript support with strict typing
+- Full TypeScript support with inferred return types
 - ESM and CommonJS builds
 - Reversible: coerce form strings to typed values _and_ typed values back to form strings
+- Throws `FormDataCoercionError` on invalid values — no silent `NaN` or `Invalid Date`
 
 ## Installation
 
@@ -41,8 +42,15 @@ const result = coerceFormData(formData, {
   birthday: { type: 'date' },
   scheduledAt: { type: 'datetime' },
 })
-// { name: 'Jane', age: 30, agree: true, birthday: Date(1994, 5, 15), scheduledAt: Date(2024, 4, 6, 14, 30) }
+
+result.name        // string
+result.age         // number
+result.agree       // boolean
+result.birthday    // Date
+result.scheduledAt // Date
 ```
+
+Return types are **automatically inferred** from the field descriptors — no casts needed.
 
 It also works with plain objects:
 
@@ -64,8 +72,10 @@ Coerce every field in a `FormData` or plain record according to a map of field d
 coerceFormData(
   data: FormData | FormRecord,
   fields: FieldDescriptors,
-): Record<string, unknown>
+): CoercedFormData<typeof fields>
 ```
+
+Throws `FormDataCoercionError` if any value is invalid for its declared type.
 
 ### `coerceValue(value, field?)`
 
@@ -79,6 +89,8 @@ coerceValue('2024-05-06T14:30', { type: 'datetime' }) // Date(2024, 4, 6, 14, 30
 coerceValue('hello', { type: 'string' })            // 'hello'
 coerceValue(['1', '2', '3'], { type: 'number-array' }) // [1, 2, 3]
 ```
+
+Throws `FormDataCoercionError` for invalid values (e.g. `'abc'` for a `number` field).
 
 ### `coerceToForm(value, field)`
 
@@ -112,6 +124,24 @@ parseDatetime('2024-05-06T14:30')                // '2024-05-06T14:30'
 parseDatetime(undefined)                          // undefined
 ```
 
+### `FormDataCoercionError`
+
+Thrown when a value cannot be coerced to the declared field type. Extends `Error` with `value` and `fieldType` properties.
+
+```ts
+import { coerceValue, FormDataCoercionError } from 'coerce-form-data'
+
+try {
+  coerceValue('not-a-number', { type: 'number' })
+} catch (error) {
+  if (error instanceof FormDataCoercionError) {
+    error.value     // 'not-a-number'
+    error.fieldType // 'number'
+    error.message   // 'Cannot coerce "not-a-number" to number'
+  }
+}
+```
+
 ## Field Descriptors
 
 Each field is described by a `FieldDescriptor`:
@@ -139,15 +169,17 @@ Array types use `FormData.getAll()` to collect multiple values (e.g. from `<sele
 | `string` | `'hello'` | `'hello'` |
 | `string` | falsy | `''` |
 | `number` | `'42'` | `42` |
-| `number` | falsy | `null` |
+| `number` | falsy / invalid | throws `FormDataCoercionError` |
 | `boolean` | `'on'`, `'true'`, truthy | `true` |
 | `boolean` | `'false'` | `false` |
+| `boolean` | `'null'` (required) | throws `FormDataCoercionError` |
+| `boolean` | `'null'` (nullable) | `null` |
+| `boolean` | `'null'` (optional) | `undefined` |
 | `boolean` | falsy | `false` |
 | `date` | `'2024-05-06'` | `Date(2024, 4, 6)` |
-| `date` | falsy | `null` |
+| `date` | falsy / invalid | throws `FormDataCoercionError` |
 | `datetime` | `'2024-05-06T14:30'` | `Date(2024, 4, 6, 14, 30)` |
-| `datetime` | `'2024-05-06T14:30:45'` | `Date(2024, 4, 6, 14, 30, 45)` |
-| `datetime` | falsy | `null` |
+| `datetime` | falsy / invalid | throws `FormDataCoercionError` |
 | `enum` | `'value'` | `'value'` |
 | `enum` | falsy | `''` |
 | `string-array` | `['a', 'b']` | `['a', 'b']` |
@@ -165,10 +197,26 @@ When a field value is missing (falsy), the `optional` and `nullable` flags contr
 
 | Flags | Missing value returns |
 | --- | --- |
-| _(none)_ | Type-specific empty value (see table above) |
+| _(none)_ | Type-specific empty value (see table above), or throws for `number`/`date`/`datetime` |
 | `optional: true` | `undefined` |
 | `nullable: true` | `null` |
 | both | `null` (nullable takes precedence) |
+
+## Type Inference
+
+All functions infer return types from the field descriptors you pass:
+
+```ts
+const result = coerceFormData(formData, {
+  name: { type: 'string' },                 // → string
+  age: { type: 'number', optional: true },   // → number | undefined
+  bio: { type: 'string', nullable: true },   // → string | null
+  birthday: { type: 'date' },               // → Date
+  tags: { type: 'string-array' },           // → string[]
+})
+```
+
+The utility types `CoercedFieldValue`, `CoercedFormData`, and `CoercedToFormValue` are also exported for use in your own code.
 
 ## Types
 
@@ -176,11 +224,14 @@ All types are exported for use in your own code:
 
 ```ts
 import type {
-  FieldType,        // 'string' | 'number' | ... | 'string-array' | 'number-array' | ...
-  FieldDescriptor,  // { type, optional?, nullable? }
-  FieldDescriptors, // Record<string, FieldDescriptor>
-  FormValue,        // FormDataEntryValue | string | string[] | null | undefined
-  FormRecord,       // Record<string, FormValue>
+  FieldType,          // 'string' | 'number' | ... | 'string-array' | ...
+  FieldDescriptor,    // { type, optional?, nullable? }
+  FieldDescriptors,   // Record<string, FieldDescriptor>
+  FormValue,          // FormDataEntryValue | string | string[] | null | undefined
+  FormRecord,         // Record<string, FormValue>
+  CoercedFieldValue,  // Compute the return type for a single field
+  CoercedFormData,    // Compute the return type for coerceFormData
+  CoercedToFormValue, // Compute the return type for coerceToForm
 } from 'coerce-form-data'
 ```
 

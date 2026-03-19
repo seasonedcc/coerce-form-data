@@ -1,8 +1,15 @@
-import type { FieldDescriptor, FieldType, FormValue } from './types'
+import { FormDataCoercionError } from './form-data-coercion-error'
+import type {
+  CoercedFieldValue,
+  FieldDescriptor,
+  FieldType,
+  FormValue,
+} from './types'
 
 function makeCoercion<T>(
+  fieldType: FieldType,
   coercion: (value: FormValue) => T,
-  emptyValue: unknown
+  emptyValue: 'throw' | unknown
 ) {
   return ({
     value,
@@ -17,36 +24,70 @@ function makeCoercion<T>(
     if (nullable) return null
     if (optional) return undefined
 
+    if (emptyValue === 'throw') {
+      throw new FormDataCoercionError(value, fieldType)
+    }
+
     return emptyValue
   }
 }
 
-const coerceString = makeCoercion(String, '')
-const coerceNumber = makeCoercion(Number, null)
+const coerceString = makeCoercion('string', String, '')
+
+const coerceNumber = makeCoercion(
+  'number',
+  (value) => {
+    const result = Number(value)
+    if (Number.isNaN(result)) {
+      throw new FormDataCoercionError(value, 'number')
+    }
+    return result
+  },
+  'throw'
+)
 
 const coerceBoolean = makeCoercion(
-  (value) =>
-    value === 'false' ? false : value === 'null' ? null : Boolean(value),
+  'boolean',
+  (value) => (value === 'false' ? false : Boolean(value)),
   false
 )
 
-const coerceDate = makeCoercion((value) => {
-  if (typeof value !== 'string') return null
+const coerceDate = makeCoercion(
+  'date',
+  (value) => {
+    if (typeof value !== 'string') {
+      throw new FormDataCoercionError(value, 'date')
+    }
+    const [year, month, day] = value.split('-').map(Number)
+    const result = new Date(year, month - 1, day)
+    if (Number.isNaN(result.getTime())) {
+      throw new FormDataCoercionError(value, 'date')
+    }
+    return result
+  },
+  'throw'
+)
 
-  const [year, month, day] = value.split('-').map(Number)
-  return new Date(year, month - 1, day)
-}, null)
-
-const coerceDatetime = makeCoercion((value) => {
-  if (typeof value !== 'string') return null
-
-  const [datePart, timePart] = value.split('T')
-  if (!datePart || !timePart) return null
-
-  const [year, month, day] = datePart.split('-').map(Number)
-  const [hours, minutes, seconds] = timePart.split(':').map(Number)
-  return new Date(year, month - 1, day, hours, minutes, seconds || 0)
-}, null)
+const coerceDatetime = makeCoercion(
+  'datetime',
+  (value) => {
+    if (typeof value !== 'string') {
+      throw new FormDataCoercionError(value, 'datetime')
+    }
+    const [datePart, timePart] = value.split('T')
+    if (!datePart || !timePart) {
+      throw new FormDataCoercionError(value, 'datetime')
+    }
+    const [year, month, day] = datePart.split('-').map(Number)
+    const [hours, minutes, seconds] = timePart.split(':').map(Number)
+    const result = new Date(year, month - 1, day, hours, minutes, seconds || 0)
+    if (Number.isNaN(result.getTime())) {
+      throw new FormDataCoercionError(value, 'datetime')
+    }
+    return result
+  },
+  'throw'
+)
 
 const arrayScalarCoercers: Partial<
   Record<FieldType, ReturnType<typeof makeCoercion>>
@@ -86,18 +127,18 @@ function coerceArray(
  * Pass a descriptor to convert the value according to its declared type —
  * for example turning a `"123"` string into the number `123`.
  *
+ * Throws {@link FormDataCoercionError} when the value cannot be coerced to
+ * the declared type (e.g. a non-numeric string for a `number` field, or an
+ * empty value for a required `number`/`date`/`datetime` field).
+ *
  * @param value - The raw value from a form field or query string
  * @param field - Optional descriptor declaring the target type
  * @returns The coerced value
+ * @throws {FormDataCoercionError} When the value is invalid for the declared type
  *
  * @example
  * ```ts
  * coerceValue('42', { type: 'number' }) // 42
- * ```
- *
- * @example
- * ```ts
- * coerceValue('true', { type: 'boolean' }) // true
  * ```
  *
  * @example
@@ -108,16 +149,15 @@ function coerceArray(
  *
  * @example
  * ```ts
- * coerceValue('2024-05-06T14:30', { type: 'datetime' })
- * // Date(2024, 4, 6, 14, 30)
- * ```
- *
- * @example
- * ```ts
  * coerceValue(['1', '2', '3'], { type: 'number-array' })
  * // [1, 2, 3]
  * ```
  */
+function coerceValue(value: FormValue): FormValue
+function coerceValue<const F extends FieldDescriptor>(
+  value: FormValue,
+  field: F
+): CoercedFieldValue<F>
 function coerceValue(value: FormValue, field?: FieldDescriptor) {
   if (!field) return value
 
@@ -128,6 +168,11 @@ function coerceValue(value: FormValue, field?: FieldDescriptor) {
   }
 
   if (type === 'boolean') {
+    if (value === 'null') {
+      if (nullable) return null
+      if (optional) return undefined
+      throw new FormDataCoercionError(value, 'boolean')
+    }
     return coerceBoolean({ value, optional, nullable })
   }
 

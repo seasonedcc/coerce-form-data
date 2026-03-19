@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { coerceValue } from './coerce-value'
+import { FormDataCoercionError } from './form-data-coercion-error'
 import type { FieldDescriptor } from './types'
 
 const boolean: FieldDescriptor = { type: 'boolean' }
@@ -48,10 +49,12 @@ describe('coerceValue', () => {
     }
   )
 
-  it('returns NaN when trying to coerce things that do not make sense into numbers', () => {
-    expect(coerceValue('not a number', number)).toEqual(Number.NaN)
-    expect(coerceValue(new File([], 'empty-file.txt'), number)).toEqual(
-      Number.NaN
+  it('throws when trying to coerce invalid values into numbers', () => {
+    expect(() => coerceValue('not a number', number)).toThrow(
+      FormDataCoercionError
+    )
+    expect(() => coerceValue(new File([], 'empty-file.txt'), number)).toThrow(
+      FormDataCoercionError
     )
   })
 
@@ -60,9 +63,9 @@ describe('coerceValue', () => {
     expect(coerceValue('999999.999', number)).toEqual(999999.999)
   })
 
-  it('coerces numbers to null when value is empty', () => {
-    expect(coerceValue('', number)).toEqual(null)
-    expect(coerceValue(null, number)).toEqual(null)
+  it('throws when coercing numbers with empty value', () => {
+    expect(() => coerceValue('', number)).toThrow(FormDataCoercionError)
+    expect(() => coerceValue(null, number)).toThrow(FormDataCoercionError)
   })
 
   it('coerces booleans to true when value is not empty', () => {
@@ -76,8 +79,18 @@ describe('coerceValue', () => {
     expect(coerceValue('false', boolean)).toEqual(false)
   })
 
-  it("coerces booleans to null when value is 'null'", () => {
-    expect(coerceValue('null', boolean)).toEqual(null)
+  it("throws when coercing 'null' to a required boolean", () => {
+    expect(() => coerceValue('null', boolean)).toThrow(FormDataCoercionError)
+  })
+
+  it("coerces nullable booleans to null when value is 'null'", () => {
+    expect(coerceValue('null', { ...boolean, nullable: true })).toEqual(null)
+  })
+
+  it("coerces optional booleans to undefined when value is 'null'", () => {
+    expect(coerceValue('null', { ...boolean, optional: true })).toEqual(
+      undefined
+    )
   })
 
   it('coerces booleans to false when value is empty', () => {
@@ -97,47 +110,45 @@ describe('coerceValue', () => {
     expect(coerceValue('false', { ...boolean, nullable: true })).toEqual(false)
   })
 
-  it("coerces nullable booleans to null when value is 'null'", () => {
-    expect(coerceValue('null', { ...boolean, nullable: true })).toEqual(null)
-  })
-
   it('coerces nullable booleans to null when value is empty', () => {
     const field = { ...boolean, nullable: true }
     expect(coerceValue('', field)).toEqual(null)
     expect(coerceValue(null, field)).toEqual(null)
   })
 
-  it('coerces dates to null when value is empty or is a file', () => {
-    expect(coerceValue('', date)).toEqual(null)
-    expect(coerceValue(null, date)).toEqual(null)
-    expect(
+  it('throws when coercing dates with empty value or file', () => {
+    expect(() => coerceValue('', date)).toThrow(FormDataCoercionError)
+    expect(() => coerceValue(null, date)).toThrow(FormDataCoercionError)
+    expect(() =>
       coerceValue(new File([], 'definitely-not-a-date.txt'), date)
-    ).toEqual(null)
+    ).toThrow(FormDataCoercionError)
   })
 
-  it('coerces dates to Invalid Date when value cannot be read as date', () => {
-    expect(String(coerceValue('not a date', date))).toEqual('Invalid Date')
+  it('throws when date value cannot be read as date', () => {
+    expect(() => coerceValue('not a date', date)).toThrow(FormDataCoercionError)
   })
 
   it('coerces dates to a valid Date when value can be read as date', () => {
     expect(coerceValue('2001-12-31', date)).toEqual(new Date(2001, 11, 31))
   })
 
-  it('coerces datetimes to null when value is empty or is a file', () => {
-    expect(coerceValue('', datetime)).toEqual(null)
-    expect(coerceValue(null, datetime)).toEqual(null)
-    expect(coerceValue(new File([], 'not-a-datetime.txt'), datetime)).toEqual(
-      null
+  it('throws when coercing datetimes with empty value or file', () => {
+    expect(() => coerceValue('', datetime)).toThrow(FormDataCoercionError)
+    expect(() => coerceValue(null, datetime)).toThrow(FormDataCoercionError)
+    expect(() =>
+      coerceValue(new File([], 'not-a-datetime.txt'), datetime)
+    ).toThrow(FormDataCoercionError)
+  })
+
+  it('throws when datetime value has no T separator', () => {
+    expect(() => coerceValue('2024-05-06', datetime)).toThrow(
+      FormDataCoercionError
     )
   })
 
-  it('coerces datetimes to null when value has no T separator', () => {
-    expect(coerceValue('2024-05-06', datetime)).toEqual(null)
-  })
-
-  it('coerces datetimes to Invalid Date when value is malformed', () => {
-    expect(String(coerceValue('not-a-dateTimestamp', datetime))).toEqual(
-      'Invalid Date'
+  it('throws when datetime value is malformed', () => {
+    expect(() => coerceValue('not-a-dateTimestamp', datetime)).toThrow(
+      FormDataCoercionError
     )
   })
 
@@ -226,6 +237,12 @@ describe('coerceValue', () => {
     expect(coerceValue(null, { type: 'number-array' })).toEqual([])
   })
 
+  it('throws when number-array element is invalid', () => {
+    expect(() =>
+      coerceValue(['1', 'not-a-number'], { type: 'number-array' })
+    ).toThrow(FormDataCoercionError)
+  })
+
   it('coerces date-array from a string array', () => {
     expect(
       coerceValue(['2024-01-01', '2024-06-15'], { type: 'date-array' })
@@ -249,5 +266,15 @@ describe('coerceValue', () => {
 
   it('coerces datetime-array to empty array when value is empty', () => {
     expect(coerceValue(null, { type: 'datetime-array' })).toEqual([])
+  })
+
+  it('includes value and fieldType in the error', () => {
+    try {
+      coerceValue('bad', number)
+    } catch (error) {
+      expect(error).toBeInstanceOf(FormDataCoercionError)
+      expect((error as FormDataCoercionError).value).toBe('bad')
+      expect((error as FormDataCoercionError).fieldType).toBe('number')
+    }
   })
 })
