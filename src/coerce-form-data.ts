@@ -1,4 +1,5 @@
 import { coerceValue } from './coerce-value'
+import { FormDataCoercionError } from './form-data-coercion-error'
 import type {
   CoercedFormData,
   FieldDescriptors,
@@ -67,10 +68,17 @@ function coerceFormData<const F extends FieldDescriptors>(
           ? data.getAll(key)
           : data.get(key)
         : data[key]
-    ;(result as Record<string, unknown>)[key] = coerceValue(
-      raw ?? null,
-      fields[key]
-    )
+    try {
+      ;(result as Record<string, unknown>)[key] = coerceValue(
+        raw ?? null,
+        fields[key]
+      )
+    } catch (error) {
+      if (error instanceof FormDataCoercionError) {
+        throw new FormDataCoercionError(error.value, error.fieldType, key)
+      }
+      throw error
+    }
   }
 
   return result

@@ -23,4 +23,15 @@ describe('FormDataCoercionError', () => {
     const error = new FormDataCoercionError('bad', 'number')
     expect(error.name).toBe('FormDataCoercionError')
   })
+
+  it('has no fieldName by default', () => {
+    const error = new FormDataCoercionError('bad', 'number')
+    expect(error.fieldName).toBeUndefined()
+  })
+
+  it('includes fieldName when provided', () => {
+    const error = new FormDataCoercionError('bad', 'number', 'age')
+    expect(error.fieldName).toBe('age')
+    expect(error.message).toBe('Cannot coerce "bad" to number (field: age)')
+  })
 })
