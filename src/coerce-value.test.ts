@@ -5,10 +5,18 @@ import type { FieldDescriptor } from './types'
 const boolean: FieldDescriptor = { type: 'boolean' }
 const number: FieldDescriptor = { type: 'number' }
 const date: FieldDescriptor = { type: 'date' }
+const datetime: FieldDescriptor = { type: 'datetime' }
 const string: FieldDescriptor = { type: 'string' }
 const enumField: FieldDescriptor = { type: 'enum' }
 
-const allTypes: FieldDescriptor[] = [boolean, number, date, string, enumField]
+const allTypes: FieldDescriptor[] = [
+  boolean,
+  number,
+  date,
+  datetime,
+  string,
+  enumField,
+]
 
 describe('coerceValue', () => {
   it('behaves like identity when field is undefined', () => {
@@ -113,6 +121,36 @@ describe('coerceValue', () => {
 
   it('coerces dates to a valid Date when value can be read as date', () => {
     expect(coerceValue('2001-12-31', date)).toEqual(new Date(2001, 11, 31))
+  })
+
+  it('coerces datetimes to null when value is empty or is a file', () => {
+    expect(coerceValue('', datetime)).toEqual(null)
+    expect(coerceValue(null, datetime)).toEqual(null)
+    expect(coerceValue(new File([], 'not-a-datetime.txt'), datetime)).toEqual(
+      null
+    )
+  })
+
+  it('coerces datetimes to null when value has no T separator', () => {
+    expect(coerceValue('2024-05-06', datetime)).toEqual(null)
+  })
+
+  it('coerces datetimes to Invalid Date when value is malformed', () => {
+    expect(String(coerceValue('not-a-dateTimestamp', datetime))).toEqual(
+      'Invalid Date'
+    )
+  })
+
+  it('coerces datetime-local strings without seconds to a valid Date', () => {
+    expect(coerceValue('2024-05-06T14:30', datetime)).toEqual(
+      new Date(2024, 4, 6, 14, 30, 0)
+    )
+  })
+
+  it('coerces datetime-local strings with seconds to a valid Date', () => {
+    expect(coerceValue('2024-05-06T14:30:45', datetime)).toEqual(
+      new Date(2024, 4, 6, 14, 30, 45)
+    )
   })
 
   it('coerces strings to empty when value is empty', () => {

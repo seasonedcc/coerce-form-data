@@ -6,7 +6,7 @@
  * const type: FieldType = 'string'
  * ```
  */
-type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'enum'
+type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'enum'
 
 /**
  * Schema-agnostic descriptor for a form field.
