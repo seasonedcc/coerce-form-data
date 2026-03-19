@@ -182,4 +182,72 @@ describe('coerceValue', () => {
   it('returns value as-is for unknown type', () => {
     expect(coerceValue('hello', { type: null })).toBe('hello')
   })
+
+  it('coerces string-array from a string array', () => {
+    expect(coerceValue(['a', 'b', 'c'], { type: 'string-array' })).toEqual([
+      'a',
+      'b',
+      'c',
+    ])
+  })
+
+  it('coerces string-array from a single string', () => {
+    expect(coerceValue('a', { type: 'string-array' })).toEqual(['a'])
+  })
+
+  it('coerces string-array to empty array when value is empty', () => {
+    expect(coerceValue(null, { type: 'string-array' })).toEqual([])
+    expect(coerceValue('', { type: 'string-array' })).toEqual([])
+  })
+
+  it('coerces string-array to undefined when optional and empty', () => {
+    expect(
+      coerceValue(null, { type: 'string-array', optional: true })
+    ).toBeUndefined()
+  })
+
+  it('coerces string-array to null when nullable and empty', () => {
+    expect(
+      coerceValue(null, { type: 'string-array', nullable: true })
+    ).toBeNull()
+  })
+
+  it('coerces number-array from a string array', () => {
+    expect(coerceValue(['1', '2', '3'], { type: 'number-array' })).toEqual([
+      1, 2, 3,
+    ])
+  })
+
+  it('coerces number-array from a single string', () => {
+    expect(coerceValue('42', { type: 'number-array' })).toEqual([42])
+  })
+
+  it('coerces number-array to empty array when value is empty', () => {
+    expect(coerceValue(null, { type: 'number-array' })).toEqual([])
+  })
+
+  it('coerces date-array from a string array', () => {
+    expect(
+      coerceValue(['2024-01-01', '2024-06-15'], { type: 'date-array' })
+    ).toEqual([new Date(2024, 0, 1), new Date(2024, 5, 15)])
+  })
+
+  it('coerces date-array to empty array when value is empty', () => {
+    expect(coerceValue(null, { type: 'date-array' })).toEqual([])
+  })
+
+  it('coerces datetime-array from a string array', () => {
+    expect(
+      coerceValue(['2024-01-01T10:00', '2024-06-15T14:30'], {
+        type: 'datetime-array',
+      })
+    ).toEqual([
+      new Date(2024, 0, 1, 10, 0, 0),
+      new Date(2024, 5, 15, 14, 30, 0),
+    ])
+  })
+
+  it('coerces datetime-array to empty array when value is empty', () => {
+    expect(coerceValue(null, { type: 'datetime-array' })).toEqual([])
+  })
 })

@@ -1,5 +1,17 @@
 import { coerceValue } from './coerce-value'
-import type { FieldDescriptors, FormRecord, FormValue } from './types'
+import type {
+  FieldDescriptors,
+  FieldType,
+  FormRecord,
+  FormValue,
+} from './types'
+
+const arrayTypes: Set<FieldType> = new Set([
+  'string-array',
+  'number-array',
+  'date-array',
+  'datetime-array',
+])
 
 /**
  * Coerce every field in a {@link FormData} or plain record according to a
@@ -42,7 +54,14 @@ function coerceFormData(
   const result: Record<string, unknown> = {}
 
   for (const key in fields) {
-    const raw: FormValue = data instanceof FormData ? data.get(key) : data[key]
+    const fieldType = fields[key].type
+    const isArray = fieldType !== null && arrayTypes.has(fieldType)
+    const raw: FormValue =
+      data instanceof FormData
+        ? isArray
+          ? data.getAll(key)
+          : data.get(key)
+        : data[key]
     result[key] = coerceValue(raw ?? null, fields[key])
   }
 

@@ -50,6 +50,22 @@ function coerceToForm(value: unknown, field: FieldDescriptor) {
     return String(value ?? '')
   }
 
+  if (type === 'string-array' || type === 'number-array') {
+    return Array.isArray(value) ? value.map(String) : []
+  }
+
+  if (type === 'date-array') {
+    return Array.isArray(value)
+      ? value.map((v: Date) => parseDate(v) as string)
+      : []
+  }
+
+  if (type === 'datetime-array') {
+    return Array.isArray(value)
+      ? value.map((v: Date) => parseDatetime(v) as string)
+      : []
+  }
+
   return value ?? ''
 }
 

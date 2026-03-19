@@ -77,6 +77,7 @@ coerceValue('true', { type: 'boolean' })            // true
 coerceValue('2024-05-06', { type: 'date' })         // Date(2024, 4, 6)
 coerceValue('2024-05-06T14:30', { type: 'datetime' }) // Date(2024, 4, 6, 14, 30)
 coerceValue('hello', { type: 'string' })            // 'hello'
+coerceValue(['1', '2', '3'], { type: 'number-array' }) // [1, 2, 3]
 ```
 
 ### `coerceToForm(value, field)`
@@ -88,6 +89,7 @@ coerceToForm(42, { type: 'number' })                              // '42'
 coerceToForm(true, { type: 'boolean' })                           // true
 coerceToForm(new Date('2024-05-06T12:00:00Z'), { type: 'date' }) // '2024-05-06'
 coerceToForm(new Date(2024, 4, 6, 14, 30), { type: 'datetime' }) // '2024-05-06T14:30:00'
+coerceToForm([1, 2], { type: 'number-array' })                    // ['1', '2']
 ```
 
 ### `parseDate(value?)`
@@ -122,7 +124,13 @@ type FieldDescriptor = {
 }
 ```
 
-Where `FieldType` is one of: `'string'` | `'number'` | `'boolean'` | `'date'` | `'datetime'` | `'enum'`
+Where `FieldType` is one of:
+
+**Scalar types:** `'string'` | `'number'` | `'boolean'` | `'date'` | `'datetime'` | `'enum'`
+
+**Array types:** `'string-array'` | `'number-array'` | `'date-array'` | `'datetime-array'`
+
+Array types use `FormData.getAll()` to collect multiple values (e.g. from `<select multiple>` or checkbox groups) and coerce each element individually.
 
 ### Coercion behavior by type
 
@@ -142,6 +150,14 @@ Where `FieldType` is one of: `'string'` | `'number'` | `'boolean'` | `'date'` | 
 | `datetime` | falsy | `null` |
 | `enum` | `'value'` | `'value'` |
 | `enum` | falsy | `''` |
+| `string-array` | `['a', 'b']` | `['a', 'b']` |
+| `string-array` | falsy | `[]` |
+| `number-array` | `['1', '2']` | `[1, 2]` |
+| `number-array` | falsy | `[]` |
+| `date-array` | `['2024-01-01']` | `[Date(2024, 0, 1)]` |
+| `date-array` | falsy | `[]` |
+| `datetime-array` | `['2024-01-01T10:00']` | `[Date(2024, 0, 1, 10, 0)]` |
+| `datetime-array` | falsy | `[]` |
 
 ### Missing values
 
@@ -160,7 +176,7 @@ All types are exported for use in your own code:
 
 ```ts
 import type {
-  FieldType,        // 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'enum'
+  FieldType,        // 'string' | 'number' | ... | 'string-array' | 'number-array' | ...
   FieldDescriptor,  // { type, optional?, nullable? }
   FieldDescriptors, // Record<string, FieldDescriptor>
   FormValue,        // FormDataEntryValue | string | string[] | null | undefined
