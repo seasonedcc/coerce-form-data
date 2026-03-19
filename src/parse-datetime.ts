@@ -1,3 +1,25 @@
+/**
+ * Format a {@link Date} as a `YYYY-MM-DDTHH:mm:ss` string suitable for
+ * `<input type="datetime-local">`.
+ *
+ * Uses local time, consistent with how the browser interprets
+ * `datetime-local` values. For date-only formatting see {@link parseDate}.
+ *
+ * @param value - A Date instance or a datetime string
+ * @returns The local datetime as `YYYY-MM-DDTHH:mm:ss`, or `undefined`
+ *   when the input is falsy
+ *
+ * @example
+ * ```ts
+ * parseDatetime(new Date(2024, 4, 6, 14, 30, 45))
+ * // '2024-05-06T14:30:45'
+ * ```
+ *
+ * @example
+ * ```ts
+ * parseDatetime(undefined) // undefined
+ * ```
+ */
 function parseDatetime(value?: Date | string) {
   if (!value) return value
 

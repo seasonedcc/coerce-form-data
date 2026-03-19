@@ -16,12 +16,14 @@ import type { FieldDescriptors, FormRecord, FormValue } from './types'
  * const fd = new FormData()
  * fd.set('name', 'Jane')
  * fd.set('age', '30')
+ * fd.set('scheduledAt', '2024-05-06T14:30')
  *
  * coerceFormData(fd, {
  *   name: { type: 'string' },
  *   age: { type: 'number' },
+ *   scheduledAt: { type: 'datetime' },
  * })
- * // { name: 'Jane', age: 30 }
+ * // { name: 'Jane', age: 30, scheduledAt: Date(2024, 4, 6, 14, 30) }
  * ```
  *
  * @example

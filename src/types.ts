@@ -5,6 +5,11 @@
  * ```ts
  * const type: FieldType = 'string'
  * ```
+ *
+ * @example
+ * ```ts
+ * const type: FieldType = 'datetime'
+ * ```
  */
 type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'enum'
 
@@ -18,6 +23,11 @@ type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'enum'
  * @example
  * ```ts
  * const field: FieldDescriptor = { type: 'number', optional: true }
+ * ```
+ *
+ * @example
+ * ```ts
+ * const field: FieldDescriptor = { type: 'datetime', nullable: true }
  * ```
  */
 type FieldDescriptor = {
@@ -42,6 +52,11 @@ type FormValue = FormDataEntryValue | string | string[] | null | undefined
  * ```ts
  * const data: FormRecord = { name: 'Jane', age: '30' }
  * ```
+ *
+ * @example
+ * ```ts
+ * const data: FormRecord = { scheduledAt: '2024-05-06T14:30' }
+ * ```
  */
 type FormRecord = Record<string, FormValue>
 
@@ -53,6 +68,13 @@ type FormRecord = Record<string, FormValue>
  * const fields: FieldDescriptors = {
  *   name: { type: 'string' },
  *   age: { type: 'number', optional: true },
+ * }
+ * ```
+ *
+ * @example
+ * ```ts
+ * const fields: FieldDescriptors = {
+ *   scheduledAt: { type: 'datetime' },
  * }
  * ```
  */

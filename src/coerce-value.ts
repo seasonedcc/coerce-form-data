@@ -61,10 +61,24 @@ const coerceDatetime = makeCoercion((value) => {
  *
  * @example
  * ```ts
- * coerceValue('42', { type: 'number' })   // 42
+ * coerceValue('42', { type: 'number' }) // 42
+ * ```
+ *
+ * @example
+ * ```ts
  * coerceValue('true', { type: 'boolean' }) // true
+ * ```
+ *
+ * @example
+ * ```ts
  * coerceValue('2024-05-06', { type: 'date' })
  * // Date(2024, 4, 6)
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceValue('2024-05-06T14:30', { type: 'datetime' })
+ * // Date(2024, 4, 6, 14, 30)
  * ```
  */
 function coerceValue(value: FormValue, field?: FieldDescriptor) {

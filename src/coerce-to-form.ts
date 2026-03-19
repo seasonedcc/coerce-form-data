@@ -7,7 +7,8 @@ import type { FieldDescriptor } from './types'
  *
  * This is the reverse of {@link coerceValue}: it takes an already-typed
  * JavaScript value and converts it into the string (or boolean) that an
- * HTML input element expects.
+ * HTML input element expects. Date fields are formatted via {@link parseDate}
+ * and datetime fields via {@link parseDatetime}.
  *
  * @param value - The typed value to format
  * @param field - Descriptor declaring the field type
@@ -15,10 +16,19 @@ import type { FieldDescriptor } from './types'
  *
  * @example
  * ```ts
- * coerceToForm(true, { type: 'boolean' })  // true
- * coerceToForm(42, { type: 'number' })     // '42'
+ * coerceToForm(42, { type: 'number' }) // '42'
+ * ```
+ *
+ * @example
+ * ```ts
  * coerceToForm(new Date('2024-05-06T12:00:00Z'), { type: 'date' })
  * // '2024-05-06'
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceToForm(new Date(2024, 4, 6, 14, 30), { type: 'datetime' })
+ * // '2024-05-06T14:30:00'
  * ```
  */
 function coerceToForm(value: unknown, field: FieldDescriptor) {
