@@ -2,12 +2,12 @@
 
 Zero-dependency form data coercion using web standard APIs.
 
-Converts raw form values (strings from HTML forms or `FormData` objects) into properly typed JavaScript values (numbers, booleans, dates, etc.) and back again.
+Converts raw form values (strings from `FormData`, `URLSearchParams`, or plain objects) into properly typed JavaScript values (numbers, booleans, dates, etc.) and back again.
 
 ## Features
 
 - Zero dependencies
-- Works with web standard `FormData` and plain objects
+- Works with `FormData`, `URLSearchParams`, and plain objects
 - Full TypeScript support with inferred return types
 - ESM and CommonJS builds
 - Reversible: coerce form strings to typed values _and_ typed values back to form strings
@@ -52,7 +52,16 @@ result.scheduledAt // Date
 
 Return types are **automatically inferred** from the field descriptors — no casts needed.
 
-It also works with plain objects:
+It also works with `URLSearchParams` and plain objects:
+
+```ts
+const params = new URLSearchParams('?page=2&active=true')
+coerceFormData(params, {
+  page: { type: 'number' },
+  active: { type: 'boolean' },
+})
+// { page: 2, active: true }
+```
 
 ```ts
 coerceFormData(
@@ -66,16 +75,18 @@ coerceFormData(
 
 ### `coerceFormData(data, fields)`
 
-Coerce every field in a `FormData` or plain record according to a map of field descriptors. Only keys present in `fields` are included in the result.
+Coerce every field in a `FormDataLike` source or plain record according to a map of field descriptors. Only keys present in `fields` are included in the result.
+
+Accepts any object with `.get()` and `.getAll()` methods (`FormData`, `URLSearchParams`, or custom implementations) as well as plain key/value records.
 
 ```ts
 coerceFormData(
-  data: FormData | FormRecord,
+  data: FormDataLike | FormRecord,
   fields: FieldDescriptors,
 ): CoercedFormData<typeof fields>
 ```
 
-Throws `FormDataCoercionError` if any value is invalid for its declared type.
+Throws `FormDataCoercionError` if any value is invalid for its declared type. The error includes a `fieldName` property identifying which field failed.
 
 ### `coerceValue(value, field?)`
 
@@ -106,12 +117,12 @@ coerceToForm([1, 2], { type: 'number-array' })                    // ['1', '2']
 
 ### `parseDate(value?)`
 
-Formats a `Date` or ISO date-time string as a `YYYY-MM-DD` string suitable for `<input type="date">`.
+Formats a `Date` or ISO date-time string as a `YYYY-MM-DD` string suitable for `<input type="date">`. Uses local time for Date instances.
 
 ```ts
-parseDate(new Date('2024-05-06T12:00:00Z')) // '2024-05-06'
-parseDate('2024-05-06T12:00:00Z')           // '2024-05-06'
-parseDate(undefined)                         // undefined
+parseDate(new Date(2024, 4, 6))    // '2024-05-06'
+parseDate('2024-05-06T12:00:00Z') // '2024-05-06'
+parseDate(undefined)               // undefined
 ```
 
 ### `parseDatetime(value?)`
@@ -126,18 +137,23 @@ parseDatetime(undefined)                          // undefined
 
 ### `FormDataCoercionError`
 
-Thrown when a value cannot be coerced to the declared field type. Extends `Error` with `value` and `fieldType` properties.
+Thrown when a value cannot be coerced to the declared field type. Extends `Error` with `value`, `fieldType`, and `fieldName` properties.
+
+When thrown from `coerceFormData`, the `fieldName` property identifies which field caused the error.
 
 ```ts
-import { coerceValue, FormDataCoercionError } from 'coerce-form-data'
+import { coerceFormData, FormDataCoercionError } from 'coerce-form-data'
 
 try {
-  coerceValue('not-a-number', { type: 'number' })
+  const fd = new FormData()
+  fd.set('age', 'not-a-number')
+  coerceFormData(fd, { age: { type: 'number' } })
 } catch (error) {
   if (error instanceof FormDataCoercionError) {
     error.value     // 'not-a-number'
     error.fieldType // 'number'
-    error.message   // 'Cannot coerce "not-a-number" to number'
+    error.fieldName // 'age'
+    error.message   // 'Cannot coerce "not-a-number" to number (field: age)'
   }
 }
 ```
@@ -160,7 +176,7 @@ Where `FieldType` is one of:
 
 **Array types:** `'string-array'` | `'number-array'` | `'date-array'` | `'datetime-array'`
 
-Array types use `FormData.getAll()` to collect multiple values (e.g. from `<select multiple>` or checkbox groups) and coerce each element individually.
+Array types use `.getAll()` to collect multiple values (e.g. from `<select multiple>` or checkbox groups) and coerce each element individually.
 
 ### Coercion behavior by type
 
@@ -227,6 +243,7 @@ import type {
   FieldType,          // 'string' | 'number' | ... | 'string-array' | ...
   FieldDescriptor,    // { type, optional?, nullable? }
   FieldDescriptors,   // Record<string, FieldDescriptor>
+  FormDataLike,       // { get(key): ...; getAll(key): ... }
   FormValue,          // FormDataEntryValue | string | string[] | null | undefined
   FormRecord,         // Record<string, FormValue>
   CoercedFieldValue,  // Compute the return type for a single field
