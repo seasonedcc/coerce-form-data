@@ -16,6 +16,13 @@ describe('coerceToForm', () => {
     expect(coerceToForm(undefined, field)).toBeUndefined()
   })
 
+  it('formats datetimes as YYYY-MM-DDTHH:mm:ss strings', () => {
+    const field: FieldDescriptor = { type: 'datetime' }
+    const date = new Date(2024, 4, 6, 14, 30, 45)
+    expect(coerceToForm(date, field)).toBe('2024-05-06T14:30:45')
+    expect(coerceToForm(undefined, field)).toBeUndefined()
+  })
+
   it('casts strings, numbers and enums to strings', () => {
     expect(coerceToForm('foo', { type: 'string' })).toBe('foo')
     expect(coerceToForm(undefined, { type: 'string' })).toBe('')

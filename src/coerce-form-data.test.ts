@@ -7,6 +7,7 @@ const fields: FieldDescriptors = {
   age: { type: 'number' },
   agree: { type: 'boolean' },
   birthday: { type: 'date' },
+  scheduledAt: { type: 'datetime' },
   role: { type: 'enum' },
 }
 
@@ -17,6 +18,7 @@ describe('coerceFormData', () => {
     fd.set('age', '30')
     fd.set('agree', 'on')
     fd.set('birthday', '1994-06-15')
+    fd.set('scheduledAt', '2024-05-06T14:30')
     fd.set('role', 'admin')
 
     const result = coerceFormData(fd, fields)
@@ -25,6 +27,7 @@ describe('coerceFormData', () => {
     expect(result.age).toBe(30)
     expect(result.agree).toBe(true)
     expect(result.birthday).toEqual(new Date(1994, 5, 15))
+    expect(result.scheduledAt).toEqual(new Date(2024, 4, 6, 14, 30, 0))
     expect(result.role).toBe('admin')
   })
 
@@ -34,6 +37,7 @@ describe('coerceFormData', () => {
       age: '30',
       agree: 'on',
       birthday: '1994-06-15',
+      scheduledAt: '2024-05-06T14:30',
       role: 'admin',
     }
 
@@ -43,6 +47,7 @@ describe('coerceFormData', () => {
     expect(result.age).toBe(30)
     expect(result.agree).toBe(true)
     expect(result.birthday).toEqual(new Date(1994, 5, 15))
+    expect(result.scheduledAt).toEqual(new Date(2024, 4, 6, 14, 30, 0))
     expect(result.role).toBe('admin')
   })
 

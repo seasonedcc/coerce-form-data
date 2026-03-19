@@ -1,4 +1,5 @@
 import { parseDate } from './parse-date'
+import { parseDatetime } from './parse-datetime'
 import type { FieldDescriptor } from './types'
 
 /**
@@ -29,6 +30,10 @@ function coerceToForm(value: unknown, field: FieldDescriptor) {
 
   if (type === 'date') {
     return parseDate(value as Date | undefined)
+  }
+
+  if (type === 'datetime') {
+    return parseDatetime(value as Date | undefined)
   }
 
   if (type === 'enum' || type === 'string' || type === 'number') {

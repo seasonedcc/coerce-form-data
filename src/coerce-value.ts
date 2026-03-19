@@ -37,6 +37,17 @@ const coerceDate = makeCoercion((value) => {
   return new Date(year, month - 1, day)
 }, null)
 
+const coerceDatetime = makeCoercion((value) => {
+  if (typeof value !== 'string') return null
+
+  const [datePart, timePart] = value.split('T')
+  if (!datePart || !timePart) return null
+
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hours, minutes, seconds] = timePart.split(':').map(Number)
+  return new Date(year, month - 1, day, hours, minutes, seconds || 0)
+}, null)
+
 /**
  * Coerce a raw form value into its typed JavaScript representation.
  *
@@ -71,6 +82,10 @@ function coerceValue(value: FormValue, field?: FieldDescriptor) {
 
   if (type === 'date') {
     return coerceDate({ value, optional, nullable })
+  }
+
+  if (type === 'datetime') {
+    return coerceDatetime({ value, optional, nullable })
   }
 
   if (type === 'string' || type === 'enum') {
