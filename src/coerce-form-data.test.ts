@@ -121,4 +121,17 @@ describe('coerceFormData', () => {
       FormDataCoercionError
     )
   })
+
+  it('includes the field name in the error', () => {
+    const fd = new FormData()
+    fd.set('age', 'not-a-number')
+
+    try {
+      coerceFormData(fd, { age: { type: 'number' } })
+    } catch (error) {
+      expect(error).toBeInstanceOf(FormDataCoercionError)
+      expect((error as FormDataCoercionError).fieldName).toBe('age')
+      expect((error as FormDataCoercionError).message).toContain('(field: age)')
+    }
+  })
 })
