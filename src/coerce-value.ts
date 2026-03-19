@@ -1,4 +1,4 @@
-import type { FieldDescriptor, FormValue } from './types'
+import type { FieldDescriptor, FieldType, FormValue } from './types'
 
 function makeCoercion<T>(
   coercion: (value: FormValue) => T,
@@ -48,6 +48,37 @@ const coerceDatetime = makeCoercion((value) => {
   return new Date(year, month - 1, day, hours, minutes, seconds || 0)
 }, null)
 
+const arrayScalarCoercers: Partial<
+  Record<FieldType, ReturnType<typeof makeCoercion>>
+> = {
+  'string-array': coerceString,
+  'number-array': coerceNumber,
+  'date-array': coerceDate,
+  'datetime-array': coerceDatetime,
+}
+
+function coerceArray(
+  value: FormValue,
+  type: FieldType,
+  optional: boolean,
+  nullable: boolean
+) {
+  const scalarCoercer = arrayScalarCoercers[type]
+  if (!scalarCoercer) return value
+
+  const items = Array.isArray(value) ? value : value ? [value] : []
+
+  if (items.length === 0) {
+    if (nullable) return null
+    if (optional) return undefined
+    return []
+  }
+
+  return items.map((item) =>
+    scalarCoercer({ value: item, optional: false, nullable: false })
+  )
+}
+
 /**
  * Coerce a raw form value into its typed JavaScript representation.
  *
@@ -80,11 +111,21 @@ const coerceDatetime = makeCoercion((value) => {
  * coerceValue('2024-05-06T14:30', { type: 'datetime' })
  * // Date(2024, 4, 6, 14, 30)
  * ```
+ *
+ * @example
+ * ```ts
+ * coerceValue(['1', '2', '3'], { type: 'number-array' })
+ * // [1, 2, 3]
+ * ```
  */
 function coerceValue(value: FormValue, field?: FieldDescriptor) {
   if (!field) return value
 
   const { type, optional = false, nullable = false } = field
+
+  if (type && type in arrayScalarCoercers) {
+    return coerceArray(value, type, optional, nullable)
+  }
 
   if (type === 'boolean') {
     return coerceBoolean({ value, optional, nullable })

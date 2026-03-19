@@ -11,7 +11,17 @@
  * const type: FieldType = 'datetime'
  * ```
  */
-type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'enum'
+type FieldType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'datetime'
+  | 'enum'
+  | 'string-array'
+  | 'number-array'
+  | 'date-array'
+  | 'datetime-array'
 
 /**
  * Schema-agnostic descriptor for a form field.
@@ -43,7 +53,13 @@ type FieldDescriptor = {
  * plain strings, string arrays (from parsed query strings), and missing
  * values.
  */
-type FormValue = FormDataEntryValue | string | string[] | null | undefined
+type FormValue =
+  | FormDataEntryValue
+  | FormDataEntryValue[]
+  | string
+  | string[]
+  | null
+  | undefined
 
 /**
  * A plain record of raw form values keyed by field name.

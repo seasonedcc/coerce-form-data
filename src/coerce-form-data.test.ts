@@ -75,4 +75,40 @@ describe('coerceFormData', () => {
     expect(result.opt).toBeUndefined()
     expect(result.nul).toBeNull()
   })
+
+  it('coerces multi-value FormData fields with array types', () => {
+    const fd = new FormData()
+    fd.append('roles', 'admin')
+    fd.append('roles', 'editor')
+    fd.append('scores', '10')
+    fd.append('scores', '20')
+
+    const result = coerceFormData(fd, {
+      roles: { type: 'string-array' },
+      scores: { type: 'number-array' },
+    })
+
+    expect(result.roles).toEqual(['admin', 'editor'])
+    expect(result.scores).toEqual([10, 20])
+  })
+
+  it('coerces array types from plain records', () => {
+    const result = coerceFormData(
+      { tags: ['a', 'b'], ids: ['1', '2'] },
+      { tags: { type: 'string-array' }, ids: { type: 'number-array' } }
+    )
+
+    expect(result.tags).toEqual(['a', 'b'])
+    expect(result.ids).toEqual([1, 2])
+  })
+
+  it('returns empty array for missing array fields', () => {
+    const fd = new FormData()
+
+    const result = coerceFormData(fd, {
+      tags: { type: 'string-array' },
+    })
+
+    expect(result.tags).toEqual([])
+  })
 })
