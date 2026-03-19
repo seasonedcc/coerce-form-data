@@ -122,6 +122,30 @@ describe('coerceFormData', () => {
     )
   })
 
+  it('coerces a URLSearchParams instance', () => {
+    const params = new URLSearchParams('?name=Jane&age=30&agree=on')
+
+    const result = coerceFormData(params, {
+      name: { type: 'string' },
+      age: { type: 'number' },
+      agree: { type: 'boolean' },
+    })
+
+    expect(result.name).toBe('Jane')
+    expect(result.age).toBe(30)
+    expect(result.agree).toBe(true)
+  })
+
+  it('coerces multi-value URLSearchParams with array types', () => {
+    const params = new URLSearchParams('?tag=a&tag=b&tag=c')
+
+    const result = coerceFormData(params, {
+      tag: { type: 'string-array' },
+    })
+
+    expect(result.tag).toEqual(['a', 'b', 'c'])
+  })
+
   it('includes the field name in the error', () => {
     const fd = new FormData()
     fd.set('age', 'not-a-number')

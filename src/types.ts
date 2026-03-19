@@ -47,6 +47,29 @@ type FieldDescriptor = {
 }
 
 /**
+ * Any object that exposes `.get()` and `.getAll()` for reading entries
+ * by key — the subset of the {@link FormData} API that coercion needs.
+ *
+ * Both the web standard `FormData` and `URLSearchParams` satisfy this
+ * type structurally, as does any custom implementation with the same
+ * methods.
+ *
+ * @example
+ * ```ts
+ * coerceFormData(new FormData(), fields)
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceFormData(new URLSearchParams('?page=2'), fields)
+ * ```
+ */
+type FormDataLike = {
+  get(key: string): FormDataEntryValue | null
+  getAll(key: string): FormDataEntryValue[]
+}
+
+/**
  * A raw value that can appear in form data.
  *
  * Covers the web standard {@link FormDataEntryValue} (string or File),
@@ -201,6 +224,7 @@ type CoercedToFormValue<F extends FieldDescriptor> =
 export type {
   FieldType,
   FieldDescriptor,
+  FormDataLike,
   FormValue,
   FormRecord,
   FieldDescriptors,

@@ -4,9 +4,14 @@ import type {
   CoercedFormData,
   FieldDescriptors,
   FieldType,
+  FormDataLike,
   FormRecord,
   FormValue,
 } from './types'
+
+function isFormDataLike(data: FormDataLike | FormRecord): data is FormDataLike {
+  return 'get' in data && typeof data.get === 'function'
+}
 
 const arrayTypes: Set<FieldType> = new Set([
   'string-array',
@@ -24,7 +29,8 @@ const arrayTypes: Set<FieldType> = new Set([
  * inline — each key maps to the JavaScript type declared by its
  * {@link FieldDescriptor}.
  *
- * @param data - A web standard {@link FormData} or a plain key/value record
+ * @param data - A {@link FormDataLike} source (`FormData`, `URLSearchParams`,
+ *   or any object with `.get()` and `.getAll()`) or a plain key/value record
  * @param fields - Map of field names to their type descriptors
  * @returns A new object with every value coerced to its declared type
  * @throws {FormDataCoercionError} When any value is invalid for its declared type
@@ -54,7 +60,7 @@ const arrayTypes: Set<FieldType> = new Set([
  * ```
  */
 function coerceFormData<const F extends FieldDescriptors>(
-  data: FormData | FormRecord,
+  data: FormDataLike | FormRecord,
   fields: F
 ): CoercedFormData<F> {
   const result = {} as CoercedFormData<F>
@@ -62,12 +68,11 @@ function coerceFormData<const F extends FieldDescriptors>(
   for (const key in fields) {
     const fieldType = fields[key].type
     const isArray = fieldType !== null && arrayTypes.has(fieldType)
-    const raw: FormValue =
-      data instanceof FormData
-        ? isArray
-          ? data.getAll(key)
-          : data.get(key)
-        : data[key]
+    const raw: FormValue = isFormDataLike(data)
+      ? isArray
+        ? data.getAll(key)
+        : data.get(key)
+      : data[key]
     try {
       ;(result as Record<string, unknown>)[key] = coerceValue(
         raw ?? null,
