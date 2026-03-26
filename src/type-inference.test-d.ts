@@ -64,6 +64,24 @@ describe('coerceValue type inference', () => {
       number[]
     >()
   })
+
+  it('returns File for file fields', () => {
+    expectTypeOf(
+      coerceValue(new File([], 'f'), { type: 'file' })
+    ).toEqualTypeOf<File>()
+  })
+
+  it('adds undefined for optional file fields', () => {
+    expectTypeOf(
+      coerceValue(new File([], 'f'), { type: 'file', optional: true })
+    ).toEqualTypeOf<File | undefined>()
+  })
+
+  it('adds null for nullable file fields', () => {
+    expectTypeOf(
+      coerceValue(new File([], 'f'), { type: 'file', nullable: true })
+    ).toEqualTypeOf<File | null>()
+  })
 })
 
 describe('coerceFormData type inference', () => {
@@ -101,6 +119,15 @@ describe('coerceFormData type inference', () => {
     expectTypeOf(result.tags).toEqualTypeOf<string[]>()
     expectTypeOf(result.scores).toEqualTypeOf<number[]>()
   })
+
+  it('infers File for file fields', () => {
+    const fd = new FormData()
+    const result = coerceFormData(fd, {
+      avatar: { type: 'file' },
+    })
+
+    expectTypeOf(result.avatar).toEqualTypeOf<File>()
+  })
 })
 
 describe('coerceToForm type inference', () => {
@@ -124,5 +151,11 @@ describe('coerceToForm type inference', () => {
     expectTypeOf(coerceToForm(['a'], { type: 'string-array' })).toEqualTypeOf<
       string[]
     >()
+  })
+
+  it('returns undefined for file fields', () => {
+    expectTypeOf(
+      coerceToForm(new File([], 'f'), { type: 'file' })
+    ).toEqualTypeOf<undefined>()
   })
 })

@@ -99,6 +99,7 @@ coerceValue('2024-05-06', { type: 'date' })         // Date(2024, 4, 6)
 coerceValue('2024-05-06T14:30', { type: 'datetime' }) // Date(2024, 4, 6, 14, 30)
 coerceValue('hello', { type: 'string' })            // 'hello'
 coerceValue(['1', '2', '3'], { type: 'number-array' }) // [1, 2, 3]
+coerceValue(file, { type: 'file' })                    // File (pass-through)
 ```
 
 Throws `FormDataCoercionError` for invalid values (e.g. `'abc'` for a `number` field).
@@ -113,7 +114,10 @@ coerceToForm(true, { type: 'boolean' })                           // true
 coerceToForm(new Date('2024-05-06T12:00:00Z'), { type: 'date' }) // '2024-05-06'
 coerceToForm(new Date(2024, 4, 6, 14, 30), { type: 'datetime' }) // '2024-05-06T14:30:00'
 coerceToForm([1, 2], { type: 'number-array' })                    // ['1', '2']
+coerceToForm(file, { type: 'file' })                              // undefined
 ```
+
+**Important**: `{ type: 'file' }` will always return undefined because file inputs cannot have programmatic defaults.
 
 ### `parseDate(value?)`
 
@@ -172,7 +176,7 @@ type FieldDescriptor = {
 
 Where `FieldType` is one of:
 
-**Scalar types:** `'string'` | `'number'` | `'boolean'` | `'date'` | `'datetime'` | `'enum'`
+**Scalar types:** `'string'` | `'number'` | `'boolean'` | `'date'` | `'datetime'` | `'enum'` | `'file'`
 
 **Array types:** `'string-array'` | `'number-array'` | `'date-array'` | `'datetime-array'`
 
@@ -198,6 +202,8 @@ Array types use `.getAll()` to collect multiple values (e.g. from `<select multi
 | `datetime` | falsy / invalid | throws `FormDataCoercionError` |
 | `enum` | `'value'` | `'value'` |
 | `enum` | falsy | `''` |
+| `file` | `File` instance | `File` (pass-through) |
+| `file` | falsy / non-File | throws `FormDataCoercionError` |
 | `string-array` | `['a', 'b']` | `['a', 'b']` |
 | `string-array` | falsy | `[]` |
 | `number-array` | `['1', '2']` | `[1, 2]` |
@@ -229,6 +235,7 @@ const result = coerceFormData(formData, {
   bio: { type: 'string', nullable: true },   // → string | null
   birthday: { type: 'date' },               // → Date
   tags: { type: 'string-array' },           // → string[]
+  avatar: { type: 'file' },                 // → File
 })
 ```
 

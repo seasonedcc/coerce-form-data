@@ -192,6 +192,15 @@ function coerceValue(value: FormValue, field?: FieldDescriptor) {
     return coerceString({ value, optional, nullable })
   }
 
+  if (type === 'file') {
+    if (value instanceof File) return value
+    if (!value) {
+      if (nullable) return null
+      if (optional) return undefined
+    }
+    throw new FormDataCoercionError(value, 'file')
+  }
+
   return value
 }
 

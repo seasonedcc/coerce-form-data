@@ -9,6 +9,7 @@ const date: FieldDescriptor = { type: 'date' }
 const datetime: FieldDescriptor = { type: 'datetime' }
 const string: FieldDescriptor = { type: 'string' }
 const enumField: FieldDescriptor = { type: 'enum' }
+const file: FieldDescriptor = { type: 'file' }
 
 const allTypes: FieldDescriptor[] = [
   boolean,
@@ -17,6 +18,7 @@ const allTypes: FieldDescriptor[] = [
   datetime,
   string,
   enumField,
+  file,
 ]
 
 describe('coerceValue', () => {
@@ -266,6 +268,22 @@ describe('coerceValue', () => {
 
   it('coerces datetime-array to empty array when value is empty', () => {
     expect(coerceValue(null, { type: 'datetime-array' })).toEqual([])
+  })
+
+  it('passes File instances through for file fields', () => {
+    const f = new File(['hello'], 'hello.txt')
+    expect(coerceValue(f, file)).toBe(f)
+  })
+
+  it('throws when coercing non-File truthy values as file', () => {
+    expect(() => coerceValue('some-string', file)).toThrow(
+      FormDataCoercionError
+    )
+  })
+
+  it('throws when coercing empty required file', () => {
+    expect(() => coerceValue(null, file)).toThrow(FormDataCoercionError)
+    expect(() => coerceValue('', file)).toThrow(FormDataCoercionError)
   })
 
   it('includes value and fieldType in the error', () => {
