@@ -146,6 +146,19 @@ describe('coerceFormData', () => {
     expect(result.tag).toEqual(['a', 'b', 'c'])
   })
 
+  it('passes File values through for file fields', () => {
+    const fd = new FormData()
+    const f = new File(['hello'], 'hello.txt')
+    fd.set('avatar', f)
+
+    const result = coerceFormData(fd, {
+      avatar: { type: 'file' },
+    })
+
+    expect(result.avatar).toBeInstanceOf(File)
+    expect((result.avatar as File).name).toBe('hello.txt')
+  })
+
   it('includes the field name in the error', () => {
     const fd = new FormData()
     fd.set('age', 'not-a-number')

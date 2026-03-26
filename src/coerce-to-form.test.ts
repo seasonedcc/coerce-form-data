@@ -64,6 +64,12 @@ describe('coerceToForm', () => {
     expect(coerceToForm(undefined, { type: 'datetime-array' })).toEqual([])
   })
 
+  it('returns undefined for file fields', () => {
+    const field: FieldDescriptor = { type: 'file' }
+    expect(coerceToForm(new File([], 'f'), field)).toBeUndefined()
+    expect(coerceToForm(undefined, field)).toBeUndefined()
+  })
+
   it('returns the value or empty string for unknown type', () => {
     expect(coerceToForm('hello', { type: null })).toBe('hello')
     expect(coerceToForm(undefined, { type: null })).toBe('')

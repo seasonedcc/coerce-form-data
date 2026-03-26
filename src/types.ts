@@ -22,6 +22,7 @@ type FieldType =
   | 'number-array'
   | 'date-array'
   | 'datetime-array'
+  | 'file'
 
 /**
  * Schema-agnostic descriptor for a form field.
@@ -139,6 +140,7 @@ type FieldTypeMap = {
   'number-array': number[]
   'date-array': Date[]
   'datetime-array': Date[]
+  file: File
 }
 
 /**
@@ -200,6 +202,7 @@ type FormFieldTypeMap = {
   'number-array': string[]
   'date-array': string[]
   'datetime-array': string[]
+  file: undefined
 }
 
 /**

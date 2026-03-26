@@ -38,6 +38,10 @@ function coerceToForm<const F extends FieldDescriptor>(
   type Result = CoercedToFormValue<F>
   const { type } = field
 
+  if (type === 'file') {
+    return undefined as Result
+  }
+
   if (type === 'boolean') {
     return (Boolean(value) ?? false) as Result
   }
