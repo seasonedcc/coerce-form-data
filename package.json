@@ -1,7 +1,7 @@
 {
   "name": "coerce-form-data",
-  "version": "2.1.0",
-  "description": "Zero-dependency form data coercion using web standard APIs",
+  "version": "3.0.0",
+  "description": "Zero-dependency form data coercion",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "type": "module",
