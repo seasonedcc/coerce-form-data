@@ -24,14 +24,35 @@ describe('FormDataCoercionError', () => {
     expect(error.name).toBe('FormDataCoercionError')
   })
 
-  it('has no fieldName by default', () => {
+  it('has an empty path by default', () => {
     const error = new FormDataCoercionError('bad', 'number')
-    expect(error.fieldName).toBeUndefined()
+    expect(error.path).toEqual([])
   })
 
-  it('includes fieldName when provided', () => {
-    const error = new FormDataCoercionError('bad', 'number', 'age')
-    expect(error.fieldName).toBe('age')
-    expect(error.message).toBe('Cannot coerce "bad" to number (field: age)')
+  it('includes path when provided', () => {
+    const error = new FormDataCoercionError('bad', 'number', ['age'])
+    expect(error.path).toEqual(['age'])
+    expect(error.message).toBe('Cannot coerce "bad" to number at age')
+  })
+
+  it('formats nested paths with dot notation', () => {
+    const error = new FormDataCoercionError('bad', 'number', ['address', 'zip'])
+    expect(error.message).toBe('Cannot coerce "bad" to number at address.zip')
+  })
+
+  it('formats array indices with bracket notation', () => {
+    const error = new FormDataCoercionError('bad', 'number', ['items', '0'])
+    expect(error.message).toBe('Cannot coerce "bad" to number at items[0]')
+  })
+
+  it('formats deeply nested paths with mixed notation', () => {
+    const error = new FormDataCoercionError('bad', 'number', [
+      'departments',
+      '0',
+      'headcount',
+    ])
+    expect(error.message).toBe(
+      'Cannot coerce "bad" to number at departments[0].headcount'
+    )
   })
 })

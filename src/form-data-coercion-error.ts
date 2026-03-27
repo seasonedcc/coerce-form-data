@@ -1,11 +1,20 @@
-import type { FieldType } from './types'
+function formatPath(path: string[]) {
+  return path.reduce(
+    (acc, segment) =>
+      /^\d+$/.test(segment)
+        ? `${acc}[${segment}]`
+        : acc
+          ? `${acc}.${segment}`
+          : segment,
+    ''
+  )
+}
 
 /**
- * Thrown when a form value cannot be coerced to the declared
- * {@link FieldType}.
+ * Thrown when a form value cannot be coerced to the declared field type.
  *
- * When thrown from {@link coerceFormData}, the {@link fieldName} property
- * identifies which field caused the error.
+ * For nested structures the {@link path} property indicates where the
+ * error occurred, formatted as `departments[0].headcount` in the message.
  *
  * @example
  * ```ts
@@ -13,35 +22,25 @@ import type { FieldType } from './types'
  *   coerceValue('not-a-number', { type: 'number' })
  * } catch (error) {
  *   if (error instanceof FormDataCoercionError) {
- *     console.log(error.value)     // 'not-a-number'
- *     console.log(error.fieldType) // 'number'
- *   }
- * }
- * ```
- *
- * @example
- * ```ts
- * try {
- *   coerceFormData(fd, { age: { type: 'number' } })
- * } catch (error) {
- *   if (error instanceof FormDataCoercionError) {
- *     console.log(error.fieldName) // 'age'
+ *     error.value     // 'not-a-number'
+ *     error.fieldType // 'number'
+ *     error.path      // []
  *   }
  * }
  * ```
  */
 class FormDataCoercionError extends Error {
-  public readonly fieldName?: string
+  public readonly path: string[]
 
   constructor(
     public readonly value: unknown,
-    public readonly fieldType: FieldType,
-    fieldName?: string
+    public readonly fieldType: string,
+    path?: string[]
   ) {
-    const field = fieldName ? ` (field: ${fieldName})` : ''
-    super(`Cannot coerce ${JSON.stringify(value)} to ${fieldType}${field}`)
+    const location = path?.length ? ` at ${formatPath(path)}` : ''
+    super(`Cannot coerce ${JSON.stringify(value)} to ${fieldType}${location}`)
     this.name = 'FormDataCoercionError'
-    this.fieldName = fieldName
+    this.path = path ?? []
   }
 }
 

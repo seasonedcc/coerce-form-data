@@ -1,13 +1,13 @@
 # coerce-form-data
 
-Zero-dependency form data coercion using web standard APIs.
+Zero-dependency form data coercion.
 
-Converts raw form values (strings from `FormData`, `URLSearchParams`, or plain objects) into properly typed JavaScript values (numbers, booleans, dates, etc.) and back again.
+Converts raw form values (strings) into properly typed JavaScript values (numbers, booleans, dates, etc.) and back again. Supports recursive structures: arrays, objects, and arbitrary nesting.
 
 ## Features
 
 - Zero dependencies
-- Works with `FormData`, `URLSearchParams`, and plain objects
+- Recursive: arrays of objects, nested objects, arrays of arrays
 - Full TypeScript support with inferred return types
 - ESM and CommonJS builds
 - Reversible: coerce form strings to typed values _and_ typed values back to form strings
@@ -26,98 +26,126 @@ yarn add coerce-form-data
 ## Quick Start
 
 ```ts
-import { coerceFormData } from 'coerce-form-data'
+import { coerceValue } from 'coerce-form-data'
 
-const formData = new FormData()
-formData.set('name', 'Jane')
-formData.set('age', '30')
-formData.set('agree', 'on')
-formData.set('birthday', '1994-06-15')
-formData.set('scheduledAt', '2024-05-06T14:30')
+// Scalar coercion
+coerceValue('42', { type: 'number' })          // 42
+coerceValue('true', { type: 'boolean' })       // true
+coerceValue('2024-05-06', { type: 'date' })    // Date(2024, 4, 6)
 
-const result = coerceFormData(formData, {
-  name: { type: 'string' },
-  age: { type: 'number' },
-  agree: { type: 'boolean' },
-  birthday: { type: 'date' },
-  scheduledAt: { type: 'datetime' },
-})
+// Array coercion
+coerceValue(['1', '2', '3'], { type: 'array', item: { type: 'number' } })
+// [1, 2, 3]
 
-result.name        // string
-result.age         // number
-result.agree       // boolean
-result.birthday    // Date
-result.scheduledAt // Date
+// Object coercion
+coerceValue(
+  { name: 'Jane', age: '30', active: 'true' },
+  {
+    type: 'object',
+    fields: {
+      name: { type: 'string' },
+      age: { type: 'number' },
+      active: { type: 'boolean' },
+    },
+  },
+)
+// { name: 'Jane', age: 30, active: true }
+
+// Deeply nested
+coerceValue(
+  { departments: [{ name: 'Eng', headcount: '50' }] },
+  {
+    type: 'object',
+    fields: {
+      departments: {
+        type: 'array',
+        item: {
+          type: 'object',
+          fields: {
+            name: { type: 'string' },
+            headcount: { type: 'number' },
+          },
+        },
+      },
+    },
+  },
+)
+// { departments: [{ name: 'Eng', headcount: 50 }] }
 ```
 
 Return types are **automatically inferred** from the field descriptors — no casts needed.
 
-It also works with `URLSearchParams` and plain objects:
+### With composable-functions
+
+Use [composable-functions](https://github.com/seasonedcc/composable-functions)' `inputFromForm` to extract raw values from `FormData` (handling bracket notation, repeated keys, etc.), then pass the result to `coerceValue` for type coercion:
 
 ```ts
-const params = new URLSearchParams('?page=2&active=true')
-coerceFormData(params, {
-  page: { type: 'number' },
-  active: { type: 'boolean' },
-})
-// { page: 2, active: true }
-```
+import { inputFromForm } from 'composable-functions'
+import { coerceValue } from 'coerce-form-data'
 
-```ts
-coerceFormData(
-  { agree: 'on', count: '5' },
-  { agree: { type: 'boolean' }, count: { type: 'number' } },
-)
-// { agree: true, count: 5 }
+const descriptor = {
+  type: 'object',
+  fields: {
+    name: { type: 'string' },
+    age: { type: 'number' },
+  },
+} as const
+
+const raw = inputFromForm(formData)
+const typed = coerceValue(raw, descriptor)
+// { name: string, age: number }
 ```
 
 ## API
 
-### `coerceFormData(data, fields)`
-
-Coerce every field in a `FormDataLike` source or plain record according to a map of field descriptors. Only keys present in `fields` are included in the result.
-
-Accepts any object with `.get()` and `.getAll()` methods (`FormData`, `URLSearchParams`, or custom implementations) as well as plain key/value records.
-
-```ts
-coerceFormData(
-  data: FormDataLike | FormRecord,
-  fields: FieldDescriptors,
-): CoercedFormData<typeof fields>
-```
-
-Throws `FormDataCoercionError` if any value is invalid for its declared type. The error includes a `fieldName` property identifying which field failed.
-
 ### `coerceValue(value, field?)`
 
-Coerce a single raw form value into its typed representation. When no field descriptor is provided, the value is returned as-is.
+Coerce a raw value into its typed representation. When no field descriptor is provided, the value is returned as-is.
 
 ```ts
+// Scalars
 coerceValue('42', { type: 'number' })               // 42
-coerceValue('true', { type: 'boolean' })            // true
-coerceValue('2024-05-06', { type: 'date' })         // Date(2024, 4, 6)
+coerceValue('true', { type: 'boolean' })             // true
+coerceValue('2024-05-06', { type: 'date' })          // Date(2024, 4, 6)
 coerceValue('2024-05-06T14:30', { type: 'datetime' }) // Date(2024, 4, 6, 14, 30)
-coerceValue('hello', { type: 'string' })            // 'hello'
-coerceValue(['1', '2', '3'], { type: 'number-array' }) // [1, 2, 3]
-coerceValue(file, { type: 'file' })                    // File (pass-through)
+coerceValue('hello', { type: 'string' })             // 'hello'
+coerceValue(file, { type: 'file' })                  // File (pass-through)
+
+// Arrays
+coerceValue(['1', '2'], { type: 'array', item: { type: 'number' } }) // [1, 2]
+
+// Objects
+coerceValue(
+  { street: 'Main St', zip: '12345' },
+  { type: 'object', fields: { street: { type: 'string' }, zip: { type: 'number' } } },
+)
+// { street: 'Main St', zip: 12345 }
 ```
 
-Throws `FormDataCoercionError` for invalid values (e.g. `'abc'` for a `number` field).
+Throws `FormDataCoercionError` for invalid values. For nested structures, the error includes a `path` indicating where the failure occurred.
 
 ### `coerceToForm(value, field)`
 
-The reverse of `coerceValue`. Converts a typed JavaScript value into the string (or boolean) that an HTML form input expects.
+The reverse of `coerceValue`. Converts a typed JavaScript value into the string (or boolean) that an HTML form input expects. Works recursively for arrays and objects.
 
 ```ts
+// Scalars
 coerceToForm(42, { type: 'number' })                              // '42'
 coerceToForm(true, { type: 'boolean' })                           // true
 coerceToForm(new Date('2024-05-06T12:00:00Z'), { type: 'date' }) // '2024-05-06'
 coerceToForm(new Date(2024, 4, 6, 14, 30), { type: 'datetime' }) // '2024-05-06T14:30:00'
-coerceToForm([1, 2], { type: 'number-array' })                    // ['1', '2']
 coerceToForm(file, { type: 'file' })                              // undefined
-```
 
-**Important**: `{ type: 'file' }` will always return undefined because file inputs cannot have programmatic defaults.
+// Arrays
+coerceToForm([1, 2], { type: 'array', item: { type: 'number' } }) // ['1', '2']
+
+// Objects
+coerceToForm(
+  { name: 'Jane', age: 30 },
+  { type: 'object', fields: { name: { type: 'string' }, age: { type: 'number' } } },
+)
+// { name: 'Jane', age: '30' }
+```
 
 ### `parseDate(value?)`
 
@@ -141,46 +169,74 @@ parseDatetime(undefined)                          // undefined
 
 ### `FormDataCoercionError`
 
-Thrown when a value cannot be coerced to the declared field type. Extends `Error` with `value`, `fieldType`, and `fieldName` properties.
+Thrown when a value cannot be coerced to the declared field type. Extends `Error` with `value`, `fieldType`, and `path` properties.
 
-When thrown from `coerceFormData`, the `fieldName` property identifies which field caused the error.
+For nested structures, the `path` array indicates where the error occurred:
 
 ```ts
-import { coerceFormData, FormDataCoercionError } from 'coerce-form-data'
+import { coerceValue, FormDataCoercionError } from 'coerce-form-data'
 
 try {
-  const fd = new FormData()
-  fd.set('age', 'not-a-number')
-  coerceFormData(fd, { age: { type: 'number' } })
+  coerceValue(
+    { departments: [{ name: 'Eng', headcount: 'bad' }] },
+    {
+      type: 'object',
+      fields: {
+        departments: {
+          type: 'array',
+          item: {
+            type: 'object',
+            fields: {
+              name: { type: 'string' },
+              headcount: { type: 'number' },
+            },
+          },
+        },
+      },
+    },
+  )
 } catch (error) {
   if (error instanceof FormDataCoercionError) {
-    error.value     // 'not-a-number'
+    error.value     // 'bad'
     error.fieldType // 'number'
-    error.fieldName // 'age'
-    error.message   // 'Cannot coerce "not-a-number" to number (field: age)'
+    error.path      // ['departments', '0', 'headcount']
+    error.message   // 'Cannot coerce "bad" to number at departments[0].headcount'
   }
 }
 ```
 
 ## Field Descriptors
 
-Each field is described by a `FieldDescriptor`:
+`FieldDescriptor` is a recursive discriminated union:
 
 ```ts
-type FieldDescriptor = {
-  type: FieldType | null
+// Scalar fields
+type ScalarFieldDescriptor = {
+  type: 'string' | 'number' | 'boolean' | 'date' | 'datetime' | 'enum' | 'file' | null
   optional?: boolean
   nullable?: boolean
 }
+
+// Array fields — item describes each element
+type ArrayFieldDescriptor = {
+  type: 'array'
+  item: FieldDescriptor
+  optional?: boolean
+  nullable?: boolean
+}
+
+// Object fields — fields describes the shape
+type ObjectFieldDescriptor = {
+  type: 'object'
+  fields: Record<string, FieldDescriptor>
+  optional?: boolean
+  nullable?: boolean
+}
+
+type FieldDescriptor = ScalarFieldDescriptor | ArrayFieldDescriptor | ObjectFieldDescriptor
 ```
 
-Where `FieldType` is one of:
-
-**Scalar types:** `'string'` | `'number'` | `'boolean'` | `'date'` | `'datetime'` | `'enum'` | `'file'`
-
-**Array types:** `'string-array'` | `'number-array'` | `'date-array'` | `'datetime-array'`
-
-Array types use `.getAll()` to collect multiple values (e.g. from `<select multiple>` or checkbox groups) and coerce each element individually.
+This mirrors [schema-info](https://github.com/seasonedcc/schema-info)'s `SchemaInfo` discriminated union, so a `SchemaInfo` value is structurally compatible as a `FieldDescriptor`.
 
 ### Coercion behavior by type
 
@@ -204,14 +260,10 @@ Array types use `.getAll()` to collect multiple values (e.g. from `<select multi
 | `enum` | falsy | `''` |
 | `file` | `File` instance | `File` (pass-through) |
 | `file` | falsy / non-File | throws `FormDataCoercionError` |
-| `string-array` | `['a', 'b']` | `['a', 'b']` |
-| `string-array` | falsy | `[]` |
-| `number-array` | `['1', '2']` | `[1, 2]` |
-| `number-array` | falsy | `[]` |
-| `date-array` | `['2024-01-01']` | `[Date(2024, 0, 1)]` |
-| `date-array` | falsy | `[]` |
-| `datetime-array` | `['2024-01-01T10:00']` | `[Date(2024, 0, 1, 10, 0)]` |
-| `datetime-array` | falsy | `[]` |
+| `array` | `['1', '2']` with `item: { type: 'number' }` | `[1, 2]` |
+| `array` | falsy | `[]` |
+| `object` | `{ age: '30' }` with `fields: { age: { type: 'number' } }` | `{ age: 30 }` |
+| `object` | falsy | recurse with `{}` (inner fields get defaults or throw) |
 
 ### Missing values
 
@@ -224,38 +276,48 @@ When a field value is missing (falsy), the `optional` and `nullable` flags contr
 | `nullable: true` | `null` |
 | both | `null` (nullable takes precedence) |
 
+These flags work at every nesting level. An optional array returns `string[] | undefined`. An array of optional strings returns `(string | undefined)[]`.
+
 ## Type Inference
 
 All functions infer return types from the field descriptors you pass:
 
 ```ts
-const result = coerceFormData(formData, {
-  name: { type: 'string' },                 // → string
-  age: { type: 'number', optional: true },   // → number | undefined
-  bio: { type: 'string', nullable: true },   // → string | null
-  birthday: { type: 'date' },               // → Date
-  tags: { type: 'string-array' },           // → string[]
-  avatar: { type: 'file' },                 // → File
+coerceValue('42', { type: 'number' })
+//=> number
+
+coerceValue('42', { type: 'number', optional: true })
+//=> number | undefined
+
+coerceValue(['1'], { type: 'array', item: { type: 'number' } })
+//=> number[]
+
+coerceValue({}, {
+  type: 'object',
+  fields: {
+    name: { type: 'string' },
+    age: { type: 'number' },
+  },
 })
+//=> { readonly name: string; readonly age: number }
 ```
 
-The utility types `CoercedFieldValue`, `CoercedFormData`, and `CoercedToFormValue` are also exported for use in your own code.
+The utility types `CoercedFieldValue` and `CoercedToFormValue` are also exported for use in your own code.
 
 ## Types
 
-All types are exported for use in your own code:
+All types are exported:
 
 ```ts
 import type {
-  FieldType,          // 'string' | 'number' | ... | 'string-array' | ...
-  FieldDescriptor,    // { type, optional?, nullable? }
-  FieldDescriptors,   // Record<string, FieldDescriptor>
-  FormDataLike,       // { get(key): ...; getAll(key): ... }
-  FormValue,          // FormDataEntryValue | string | string[] | null | undefined
-  FormRecord,         // Record<string, FormValue>
-  CoercedFieldValue,  // Compute the return type for a single field
-  CoercedFormData,    // Compute the return type for coerceFormData
-  CoercedToFormValue, // Compute the return type for coerceToForm
+  ScalarFieldType,      // 'string' | 'number' | 'boolean' | ...
+  ScalarFieldDescriptor, // { type: ScalarFieldType | null, optional?, nullable? }
+  ArrayFieldDescriptor,  // { type: 'array', item: FieldDescriptor, ... }
+  ObjectFieldDescriptor, // { type: 'object', fields: Record<string, FieldDescriptor>, ... }
+  FieldDescriptor,       // ScalarFieldDescriptor | ArrayFieldDescriptor | ObjectFieldDescriptor
+  FormValue,             // Raw input value type
+  CoercedFieldValue,     // Compute return type for coerceValue
+  CoercedToFormValue,    // Compute return type for coerceToForm
 } from 'coerce-form-data'
 ```
 

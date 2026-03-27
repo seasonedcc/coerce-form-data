@@ -1,14 +1,18 @@
 import { parseDate } from './parse-date'
 import { parseDatetime } from './parse-datetime'
-import type { CoercedToFormValue, FieldDescriptor } from './types'
+import type {
+  ArrayFieldDescriptor,
+  CoercedToFormValue,
+  FieldDescriptor,
+  ObjectFieldDescriptor,
+} from './types'
 
 /**
  * Coerce a typed value into a representation suitable for HTML form inputs.
  *
  * This is the reverse of {@link coerceValue}: it takes an already-typed
  * JavaScript value and converts it into the string (or boolean) that an
- * HTML input element expects. Date fields are formatted via {@link parseDate}
- * and datetime fields via {@link parseDatetime}.
+ * HTML input element expects. Works recursively for arrays and objects.
  *
  * @param value - The typed value to format
  * @param field - Descriptor declaring the field type
@@ -21,14 +25,17 @@ import type { CoercedToFormValue, FieldDescriptor } from './types'
  *
  * @example
  * ```ts
- * coerceToForm(new Date('2024-05-06T12:00:00Z'), { type: 'date' })
- * // '2024-05-06'
+ * coerceToForm([1, 2], { type: 'array', item: { type: 'number' } })
+ * // ['1', '2']
  * ```
  *
  * @example
  * ```ts
- * coerceToForm(new Date(2024, 4, 6, 14, 30), { type: 'datetime' })
- * // '2024-05-06T14:30:00'
+ * coerceToForm(
+ *   { name: 'Jane', age: 30 },
+ *   { type: 'object', fields: { name: { type: 'string' }, age: { type: 'number' } } },
+ * )
+ * // { name: 'Jane', age: '30' }
  * ```
  */
 function coerceToForm<const F extends FieldDescriptor>(
@@ -58,22 +65,26 @@ function coerceToForm<const F extends FieldDescriptor>(
     return String(value ?? '') as Result
   }
 
-  if (type === 'string-array' || type === 'number-array') {
-    return (Array.isArray(value) ? value.map(String) : []) as Result
-  }
-
-  if (type === 'date-array') {
-    return (
-      Array.isArray(value) ? value.map((v: Date) => parseDate(v) as string) : []
-    ) as Result
-  }
-
-  if (type === 'datetime-array') {
+  if (type === 'array') {
+    const { item } = field as ArrayFieldDescriptor
     return (
       Array.isArray(value)
-        ? value.map((v: Date) => parseDatetime(v) as string)
+        ? value.map((element) => coerceToForm(element, item))
         : []
     ) as Result
+  }
+
+  if (type === 'object') {
+    const { fields } = field as ObjectFieldDescriptor
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {} as Result
+    }
+    const record = value as Record<string, unknown>
+    const result: Record<string, unknown> = {}
+    for (const key of Object.keys(fields)) {
+      result[key] = coerceToForm(record[key], fields[key])
+    }
+    return result as Result
   }
 
   return (value ?? '') as Result

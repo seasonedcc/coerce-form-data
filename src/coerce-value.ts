@@ -1,13 +1,15 @@
 import { FormDataCoercionError } from './form-data-coercion-error'
 import type {
+  ArrayFieldDescriptor,
   CoercedFieldValue,
   FieldDescriptor,
-  FieldType,
   FormValue,
+  ObjectFieldDescriptor,
+  ScalarFieldType,
 } from './types'
 
 function makeCoercion<T>(
-  fieldType: FieldType,
+  fieldType: ScalarFieldType,
   coercion: (value: FormValue) => T,
   emptyValue: 'throw' | unknown
 ) {
@@ -89,49 +91,18 @@ const coerceDatetime = makeCoercion(
   'throw'
 )
 
-const arrayScalarCoercers: Partial<
-  Record<FieldType, ReturnType<typeof makeCoercion>>
-> = {
-  'string-array': coerceString,
-  'number-array': coerceNumber,
-  'date-array': coerceDate,
-  'datetime-array': coerceDatetime,
-}
-
-function coerceArray(
-  value: FormValue,
-  type: FieldType,
-  optional: boolean,
-  nullable: boolean
-) {
-  const scalarCoercer = arrayScalarCoercers[type]
-  if (!scalarCoercer) return value
-
-  const items = Array.isArray(value) ? value : value ? [value] : []
-
-  if (items.length === 0) {
-    if (nullable) return null
-    if (optional) return undefined
-    return []
-  }
-
-  return items.map((item) =>
-    scalarCoercer({ value: item, optional: false, nullable: false })
-  )
-}
-
 /**
  * Coerce a raw form value into its typed JavaScript representation.
  *
  * When no {@link FieldDescriptor} is provided the value is returned as-is.
- * Pass a descriptor to convert the value according to its declared type —
- * for example turning a `"123"` string into the number `123`.
+ * Pass a descriptor to convert the value according to its declared type.
+ * Handles scalars, arrays, and objects recursively.
  *
  * Throws {@link FormDataCoercionError} when the value cannot be coerced to
- * the declared type (e.g. a non-numeric string for a `number` field, or an
- * empty value for a required `number`/`date`/`datetime` field).
+ * the declared type. For nested structures the error includes a `path`
+ * indicating where the failure occurred.
  *
- * @param value - The raw value from a form field or query string
+ * @param value - The raw value to coerce
  * @param field - Optional descriptor declaring the target type
  * @returns The coerced value
  * @throws {FormDataCoercionError} When the value is invalid for the declared type
@@ -143,14 +114,17 @@ function coerceArray(
  *
  * @example
  * ```ts
- * coerceValue('2024-05-06', { type: 'date' })
- * // Date(2024, 4, 6)
+ * coerceValue(['1', '2'], { type: 'array', item: { type: 'number' } })
+ * // [1, 2]
  * ```
  *
  * @example
  * ```ts
- * coerceValue(['1', '2', '3'], { type: 'number-array' })
- * // [1, 2, 3]
+ * coerceValue(
+ *   { name: 'Jane', age: '30' },
+ *   { type: 'object', fields: { name: { type: 'string' }, age: { type: 'number' } } },
+ * )
+ * // { name: 'Jane', age: 30 }
  * ```
  */
 function coerceValue(value: FormValue): FormValue
@@ -163,8 +137,58 @@ function coerceValue(value: FormValue, field?: FieldDescriptor) {
 
   const { type, optional = false, nullable = false } = field
 
-  if (type && type in arrayScalarCoercers) {
-    return coerceArray(value, type, optional, nullable)
+  if (type === 'array') {
+    const { item } = field as ArrayFieldDescriptor
+    const items = Array.isArray(value) ? value : value ? [value] : []
+
+    if (items.length === 0) {
+      if (nullable) return null
+      if (optional) return undefined
+      return []
+    }
+
+    return items.map((element, index) => {
+      try {
+        return coerceValue(element as FormValue, item)
+      } catch (error) {
+        if (error instanceof FormDataCoercionError) {
+          throw new FormDataCoercionError(error.value, error.fieldType, [
+            String(index),
+            ...error.path,
+          ])
+        }
+        throw error
+      }
+    })
+  }
+
+  if (type === 'object') {
+    const { fields } = field as ObjectFieldDescriptor
+    const isRecord = value && typeof value === 'object' && !Array.isArray(value)
+
+    if (!isRecord) {
+      if (nullable) return null
+      if (optional) return undefined
+    }
+
+    const record = (isRecord ? value : {}) as Record<string, unknown>
+    const result: Record<string, unknown> = {}
+
+    for (const key of Object.keys(fields)) {
+      try {
+        result[key] = coerceValue(record[key] as FormValue, fields[key])
+      } catch (error) {
+        if (error instanceof FormDataCoercionError) {
+          throw new FormDataCoercionError(error.value, error.fieldType, [
+            key,
+            ...error.path,
+          ])
+        }
+        throw error
+      }
+    }
+
+    return result
   }
 
   if (type === 'boolean') {

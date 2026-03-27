@@ -196,80 +196,6 @@ describe('coerceValue', () => {
     expect(coerceValue('hello', { type: null })).toBe('hello')
   })
 
-  it('coerces string-array from a string array', () => {
-    expect(coerceValue(['a', 'b', 'c'], { type: 'string-array' })).toEqual([
-      'a',
-      'b',
-      'c',
-    ])
-  })
-
-  it('coerces string-array from a single string', () => {
-    expect(coerceValue('a', { type: 'string-array' })).toEqual(['a'])
-  })
-
-  it('coerces string-array to empty array when value is empty', () => {
-    expect(coerceValue(null, { type: 'string-array' })).toEqual([])
-    expect(coerceValue('', { type: 'string-array' })).toEqual([])
-  })
-
-  it('coerces string-array to undefined when optional and empty', () => {
-    expect(
-      coerceValue(null, { type: 'string-array', optional: true })
-    ).toBeUndefined()
-  })
-
-  it('coerces string-array to null when nullable and empty', () => {
-    expect(
-      coerceValue(null, { type: 'string-array', nullable: true })
-    ).toBeNull()
-  })
-
-  it('coerces number-array from a string array', () => {
-    expect(coerceValue(['1', '2', '3'], { type: 'number-array' })).toEqual([
-      1, 2, 3,
-    ])
-  })
-
-  it('coerces number-array from a single string', () => {
-    expect(coerceValue('42', { type: 'number-array' })).toEqual([42])
-  })
-
-  it('coerces number-array to empty array when value is empty', () => {
-    expect(coerceValue(null, { type: 'number-array' })).toEqual([])
-  })
-
-  it('throws when number-array element is invalid', () => {
-    expect(() =>
-      coerceValue(['1', 'not-a-number'], { type: 'number-array' })
-    ).toThrow(FormDataCoercionError)
-  })
-
-  it('coerces date-array from a string array', () => {
-    expect(
-      coerceValue(['2024-01-01', '2024-06-15'], { type: 'date-array' })
-    ).toEqual([new Date(2024, 0, 1), new Date(2024, 5, 15)])
-  })
-
-  it('coerces date-array to empty array when value is empty', () => {
-    expect(coerceValue(null, { type: 'date-array' })).toEqual([])
-  })
-
-  it('coerces datetime-array from a string array', () => {
-    expect(
-      coerceValue(['2024-01-01T10:00', '2024-06-15T14:30'], {
-        type: 'datetime-array',
-      })
-    ).toEqual([
-      new Date(2024, 0, 1, 10, 0, 0),
-      new Date(2024, 5, 15, 14, 30, 0),
-    ])
-  })
-
-  it('coerces datetime-array to empty array when value is empty', () => {
-    expect(coerceValue(null, { type: 'datetime-array' })).toEqual([])
-  })
-
   it('passes File instances through for file fields', () => {
     const f = new File(['hello'], 'hello.txt')
     expect(coerceValue(f, file)).toBe(f)
@@ -293,6 +219,384 @@ describe('coerceValue', () => {
       expect(error).toBeInstanceOf(FormDataCoercionError)
       expect((error as FormDataCoercionError).value).toBe('bad')
       expect((error as FormDataCoercionError).fieldType).toBe('number')
+    }
+  })
+})
+
+describe('coerceValue with arrays', () => {
+  it('coerces array of strings from a string array', () => {
+    expect(
+      coerceValue(['a', 'b', 'c'], { type: 'array', item: { type: 'string' } })
+    ).toEqual(['a', 'b', 'c'])
+  })
+
+  it('coerces array of strings from a single string', () => {
+    expect(
+      coerceValue('a', { type: 'array', item: { type: 'string' } })
+    ).toEqual(['a'])
+  })
+
+  it('coerces array of strings to empty array when value is empty', () => {
+    expect(
+      coerceValue(null, { type: 'array', item: { type: 'string' } })
+    ).toEqual([])
+    expect(
+      coerceValue('', { type: 'array', item: { type: 'string' } })
+    ).toEqual([])
+  })
+
+  it('coerces array to undefined when optional and empty', () => {
+    expect(
+      coerceValue(null, {
+        type: 'array',
+        item: { type: 'string' },
+        optional: true,
+      })
+    ).toBeUndefined()
+  })
+
+  it('coerces array to null when nullable and empty', () => {
+    expect(
+      coerceValue(null, {
+        type: 'array',
+        item: { type: 'string' },
+        nullable: true,
+      })
+    ).toBeNull()
+  })
+
+  it('coerces array of numbers from a string array', () => {
+    expect(
+      coerceValue(['1', '2', '3'], { type: 'array', item: { type: 'number' } })
+    ).toEqual([1, 2, 3])
+  })
+
+  it('coerces array of numbers from a single string', () => {
+    expect(
+      coerceValue('42', { type: 'array', item: { type: 'number' } })
+    ).toEqual([42])
+  })
+
+  it('coerces array of numbers to empty array when value is empty', () => {
+    expect(
+      coerceValue(null, { type: 'array', item: { type: 'number' } })
+    ).toEqual([])
+  })
+
+  it('throws when number array element is invalid', () => {
+    expect(() =>
+      coerceValue(['1', 'not-a-number'], {
+        type: 'array',
+        item: { type: 'number' },
+      })
+    ).toThrow(FormDataCoercionError)
+  })
+
+  it('coerces array of dates from a string array', () => {
+    expect(
+      coerceValue(['2024-01-01', '2024-06-15'], {
+        type: 'array',
+        item: { type: 'date' },
+      })
+    ).toEqual([new Date(2024, 0, 1), new Date(2024, 5, 15)])
+  })
+
+  it('coerces array of dates to empty array when value is empty', () => {
+    expect(
+      coerceValue(null, { type: 'array', item: { type: 'date' } })
+    ).toEqual([])
+  })
+
+  it('coerces array of datetimes from a string array', () => {
+    expect(
+      coerceValue(['2024-01-01T10:00', '2024-06-15T14:30'], {
+        type: 'array',
+        item: { type: 'datetime' },
+      })
+    ).toEqual([
+      new Date(2024, 0, 1, 10, 0, 0),
+      new Date(2024, 5, 15, 14, 30, 0),
+    ])
+  })
+
+  it('coerces array of datetimes to empty array when value is empty', () => {
+    expect(
+      coerceValue(null, { type: 'array', item: { type: 'datetime' } })
+    ).toEqual([])
+  })
+
+  it('coerces nested arrays (array of arrays)', () => {
+    expect(
+      coerceValue(
+        [
+          ['1', '2'],
+          ['3', '4'],
+        ],
+        { type: 'array', item: { type: 'array', item: { type: 'number' } } }
+      )
+    ).toEqual([
+      [1, 2],
+      [3, 4],
+    ])
+  })
+
+  it('coerces array of objects', () => {
+    expect(
+      coerceValue(
+        [
+          { street: 'Main St', zip: '12345' },
+          { street: 'Oak Ave', zip: '67890' },
+        ],
+        {
+          type: 'array',
+          item: {
+            type: 'object',
+            fields: {
+              street: { type: 'string' },
+              zip: { type: 'number' },
+            },
+          },
+        }
+      )
+    ).toEqual([
+      { street: 'Main St', zip: 12345 },
+      { street: 'Oak Ave', zip: 67890 },
+    ])
+  })
+
+  it('includes index in error path when array element fails', () => {
+    try {
+      coerceValue(['1', 'bad'], { type: 'array', item: { type: 'number' } })
+    } catch (error) {
+      expect(error).toBeInstanceOf(FormDataCoercionError)
+      expect((error as FormDataCoercionError).path).toEqual(['1'])
+    }
+  })
+})
+
+describe('coerceValue with objects', () => {
+  it('coerces a simple object with scalar fields', () => {
+    expect(
+      coerceValue(
+        { name: 'Jane', age: '30' },
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string' },
+            age: { type: 'number' },
+          },
+        }
+      )
+    ).toEqual({ name: 'Jane', age: 30 })
+  })
+
+  it('coerces an object with all scalar types', () => {
+    expect(
+      coerceValue(
+        {
+          name: 'Jane',
+          age: '30',
+          active: 'true',
+          joined: '2024-01-15',
+          lastLogin: '2024-05-06T14:30',
+          role: 'admin',
+        },
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string' },
+            age: { type: 'number' },
+            active: { type: 'boolean' },
+            joined: { type: 'date' },
+            lastLogin: { type: 'datetime' },
+            role: { type: 'enum' },
+          },
+        }
+      )
+    ).toEqual({
+      name: 'Jane',
+      age: 30,
+      active: true,
+      joined: new Date(2024, 0, 15),
+      lastLogin: new Date(2024, 4, 6, 14, 30, 0),
+      role: 'admin',
+    })
+  })
+
+  it('handles optional fields in objects', () => {
+    expect(
+      coerceValue(
+        {},
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string', optional: true },
+            age: { type: 'number', optional: true },
+          },
+        }
+      )
+    ).toEqual({ name: undefined, age: undefined })
+  })
+
+  it('handles nullable fields in objects', () => {
+    expect(
+      coerceValue(
+        {},
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string', nullable: true },
+            age: { type: 'number', nullable: true },
+          },
+        }
+      )
+    ).toEqual({ name: null, age: null })
+  })
+
+  it('returns null for nullable object with missing value', () => {
+    expect(
+      coerceValue(null, {
+        type: 'object',
+        fields: { name: { type: 'string' } },
+        nullable: true,
+      })
+    ).toBeNull()
+  })
+
+  it('returns undefined for optional object with missing value', () => {
+    expect(
+      coerceValue(null, {
+        type: 'object',
+        fields: { name: { type: 'string' } },
+        optional: true,
+      })
+    ).toBeUndefined()
+  })
+
+  it('applies defaults for required object with missing value', () => {
+    expect(
+      coerceValue(null, {
+        type: 'object',
+        fields: {
+          name: { type: 'string' },
+          active: { type: 'boolean' },
+        },
+      })
+    ).toEqual({ name: '', active: false })
+  })
+
+  it('throws for required object with missing value when inner field requires a value', () => {
+    expect(() =>
+      coerceValue(null, {
+        type: 'object',
+        fields: { age: { type: 'number' } },
+      })
+    ).toThrow(FormDataCoercionError)
+  })
+
+  it('coerces nested objects', () => {
+    expect(
+      coerceValue(
+        { address: { street: 'Main St', zip: '12345' } },
+        {
+          type: 'object',
+          fields: {
+            address: {
+              type: 'object',
+              fields: {
+                street: { type: 'string' },
+                zip: { type: 'number' },
+              },
+            },
+          },
+        }
+      )
+    ).toEqual({ address: { street: 'Main St', zip: 12345 } })
+  })
+
+  it('coerces objects with array fields', () => {
+    expect(
+      coerceValue(
+        { tags: ['a', 'b'], scores: ['1', '2'] },
+        {
+          type: 'object',
+          fields: {
+            tags: { type: 'array', item: { type: 'string' } },
+            scores: { type: 'array', item: { type: 'number' } },
+          },
+        }
+      )
+    ).toEqual({ tags: ['a', 'b'], scores: [1, 2] })
+  })
+
+  it('coerces deeply nested structures (object -> array -> object)', () => {
+    expect(
+      coerceValue(
+        { departments: [{ name: 'Eng', headcount: '50' }] },
+        {
+          type: 'object',
+          fields: {
+            departments: {
+              type: 'array',
+              item: {
+                type: 'object',
+                fields: {
+                  name: { type: 'string' },
+                  headcount: { type: 'number' },
+                },
+              },
+            },
+          },
+        }
+      )
+    ).toEqual({ departments: [{ name: 'Eng', headcount: 50 }] })
+  })
+
+  it('includes field name in error path when object field fails', () => {
+    try {
+      coerceValue(
+        { age: 'bad' },
+        {
+          type: 'object',
+          fields: { age: { type: 'number' } },
+        }
+      )
+    } catch (error) {
+      expect(error).toBeInstanceOf(FormDataCoercionError)
+      expect((error as FormDataCoercionError).path).toEqual(['age'])
+    }
+  })
+
+  it('includes full path in error for deeply nested failures', () => {
+    try {
+      coerceValue(
+        { departments: [{ name: 'Eng', headcount: 'bad' }] },
+        {
+          type: 'object',
+          fields: {
+            departments: {
+              type: 'array',
+              item: {
+                type: 'object',
+                fields: {
+                  name: { type: 'string' },
+                  headcount: { type: 'number' },
+                },
+              },
+            },
+          },
+        }
+      )
+    } catch (error) {
+      expect(error).toBeInstanceOf(FormDataCoercionError)
+      expect((error as FormDataCoercionError).path).toEqual([
+        'departments',
+        '0',
+        'headcount',
+      ])
+      expect((error as FormDataCoercionError).message).toBe(
+        'Cannot coerce "bad" to number at departments[0].headcount'
+      )
     }
   })
 })
