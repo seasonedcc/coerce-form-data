@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-This repository is a standalone TypeScript library that provides **zero-dependency form data coercion using web standard APIs**. It converts raw form values (strings from HTML forms or FormData objects) into properly typed JavaScript values (numbers, booleans, dates, etc.) and vice versa.
+This repository is a standalone TypeScript library that provides **zero-dependency form data coercion**. It converts raw form values (strings from HTML forms) into properly typed JavaScript values (numbers, booleans, dates, etc.) and vice versa. Supports recursive structures: arrays, objects, and arbitrary nesting.
 
 ## Essential Commands
 

@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from 'vitest'
-import { coerceFormData, coerceToForm, coerceValue } from './index'
+import { coerceToForm, coerceValue } from './index'
 import type { FormValue } from './types'
 
 describe('coerceValue type inference', () => {
@@ -53,18 +53,6 @@ describe('coerceValue type inference', () => {
     ).toEqualTypeOf<number | null | undefined>()
   })
 
-  it('returns string[] for string-array fields', () => {
-    expectTypeOf(coerceValue(['a'], { type: 'string-array' })).toEqualTypeOf<
-      string[]
-    >()
-  })
-
-  it('returns number[] for number-array fields', () => {
-    expectTypeOf(coerceValue(['1'], { type: 'number-array' })).toEqualTypeOf<
-      number[]
-    >()
-  })
-
   it('returns File for file fields', () => {
     expectTypeOf(
       coerceValue(new File([], 'f'), { type: 'file' })
@@ -84,49 +72,138 @@ describe('coerceValue type inference', () => {
   })
 })
 
-describe('coerceFormData type inference', () => {
-  it('infers typed object from inline descriptors', () => {
-    const fd = new FormData()
-    const result = coerceFormData(fd, {
-      name: { type: 'string' },
-      age: { type: 'number' },
-      active: { type: 'boolean' },
-    })
-
-    expectTypeOf(result.name).toEqualTypeOf<string>()
-    expectTypeOf(result.age).toEqualTypeOf<number>()
-    expectTypeOf(result.active).toEqualTypeOf<boolean>()
+describe('coerceValue array type inference', () => {
+  it('returns number[] for array of numbers', () => {
+    expectTypeOf(
+      coerceValue(['1'], { type: 'array', item: { type: 'number' } })
+    ).toEqualTypeOf<number[]>()
   })
 
-  it('infers optional and nullable modifiers', () => {
-    const fd = new FormData()
-    const result = coerceFormData(fd, {
-      name: { type: 'string', optional: true },
-      age: { type: 'number', nullable: true },
-    })
-
-    expectTypeOf(result.name).toEqualTypeOf<string | undefined>()
-    expectTypeOf(result.age).toEqualTypeOf<number | null>()
+  it('returns string[] for array of strings', () => {
+    expectTypeOf(
+      coerceValue(['a'], { type: 'array', item: { type: 'string' } })
+    ).toEqualTypeOf<string[]>()
   })
 
-  it('infers array types', () => {
-    const fd = new FormData()
-    const result = coerceFormData(fd, {
-      tags: { type: 'string-array' },
-      scores: { type: 'number-array' },
-    })
-
-    expectTypeOf(result.tags).toEqualTypeOf<string[]>()
-    expectTypeOf(result.scores).toEqualTypeOf<number[]>()
+  it('returns Date[] for array of dates', () => {
+    expectTypeOf(
+      coerceValue([], { type: 'array', item: { type: 'date' } })
+    ).toEqualTypeOf<Date[]>()
   })
 
-  it('infers File for file fields', () => {
-    const fd = new FormData()
-    const result = coerceFormData(fd, {
-      avatar: { type: 'file' },
-    })
+  it('adds undefined for optional arrays', () => {
+    expectTypeOf(
+      coerceValue([], {
+        type: 'array',
+        item: { type: 'number' },
+        optional: true,
+      })
+    ).toEqualTypeOf<number[] | undefined>()
+  })
 
-    expectTypeOf(result.avatar).toEqualTypeOf<File>()
+  it('adds null for nullable arrays', () => {
+    expectTypeOf(
+      coerceValue([], {
+        type: 'array',
+        item: { type: 'number' },
+        nullable: true,
+      })
+    ).toEqualTypeOf<number[] | null>()
+  })
+
+  it('returns (number | undefined)[] for array of optional numbers', () => {
+    expectTypeOf(
+      coerceValue([], {
+        type: 'array',
+        item: { type: 'number', optional: true },
+      })
+    ).toEqualTypeOf<(number | undefined)[]>()
+  })
+
+  it('returns number[][] for nested arrays', () => {
+    expectTypeOf(
+      coerceValue([], {
+        type: 'array',
+        item: { type: 'array', item: { type: 'number' } },
+      })
+    ).toEqualTypeOf<number[][]>()
+  })
+})
+
+describe('coerceValue object type inference', () => {
+  it('returns typed object for object descriptor', () => {
+    expectTypeOf(
+      coerceValue(
+        {},
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string' },
+            age: { type: 'number' },
+          },
+        }
+      )
+    ).toEqualTypeOf<{ readonly name: string; readonly age: number }>()
+  })
+
+  it('adds undefined for optional objects', () => {
+    expectTypeOf(
+      coerceValue(null, {
+        type: 'object',
+        fields: { name: { type: 'string' } },
+        optional: true,
+      })
+    ).toEqualTypeOf<{ readonly name: string } | undefined>()
+  })
+
+  it('adds null for nullable objects', () => {
+    expectTypeOf(
+      coerceValue(null, {
+        type: 'object',
+        fields: { name: { type: 'string' } },
+        nullable: true,
+      })
+    ).toEqualTypeOf<{ readonly name: string } | null>()
+  })
+
+  it('handles optional fields inside objects', () => {
+    expectTypeOf(
+      coerceValue(
+        {},
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string', optional: true },
+          },
+        }
+      )
+    ).toEqualTypeOf<{ readonly name: string | undefined }>()
+  })
+
+  it('returns typed object for object with array field', () => {
+    expectTypeOf(
+      coerceValue(
+        {},
+        {
+          type: 'object',
+          fields: {
+            tags: { type: 'array', item: { type: 'string' } },
+          },
+        }
+      )
+    ).toEqualTypeOf<{ readonly tags: string[] }>()
+  })
+
+  it('returns typed array of objects', () => {
+    expectTypeOf(
+      coerceValue([], {
+        type: 'array',
+        item: {
+          type: 'object',
+          fields: { name: { type: 'string' } },
+        },
+      })
+    ).toEqualTypeOf<{ readonly name: string }[]>()
   })
 })
 
@@ -147,15 +224,42 @@ describe('coerceToForm type inference', () => {
     >()
   })
 
-  it('returns string[] for array fields', () => {
-    expectTypeOf(coerceToForm(['a'], { type: 'string-array' })).toEqualTypeOf<
-      string[]
-    >()
-  })
-
   it('returns undefined for file fields', () => {
     expectTypeOf(
       coerceToForm(new File([], 'f'), { type: 'file' })
     ).toEqualTypeOf<undefined>()
+  })
+
+  it('returns string[] for array of number fields', () => {
+    expectTypeOf(
+      coerceToForm([1], { type: 'array', item: { type: 'number' } })
+    ).toEqualTypeOf<string[]>()
+  })
+
+  it('returns boolean[] for array of boolean fields', () => {
+    expectTypeOf(
+      coerceToForm([true], { type: 'array', item: { type: 'boolean' } })
+    ).toEqualTypeOf<boolean[]>()
+  })
+
+  it('returns typed object for object descriptor', () => {
+    expectTypeOf(
+      coerceToForm(
+        {},
+        {
+          type: 'object',
+          fields: {
+            name: { type: 'string' },
+            count: { type: 'number' },
+          },
+        }
+      )
+    ).toEqualTypeOf<{ readonly name: string; readonly count: string }>()
+  })
+
+  it('returns (string | undefined)[] for array of date fields', () => {
+    expectTypeOf(
+      coerceToForm([], { type: 'array', item: { type: 'date' } })
+    ).toEqualTypeOf<(string | undefined)[]>()
   })
 })
