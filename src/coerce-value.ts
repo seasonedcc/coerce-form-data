@@ -91,6 +91,42 @@ const coerceDatetime = makeCoercion(
   'throw'
 )
 
+/**
+ * Coerce a raw form value into its typed JavaScript representation.
+ *
+ * When no {@link FieldDescriptor} is provided the value is returned as-is.
+ * Pass a descriptor to convert the value according to its declared type.
+ * Handles scalars, arrays, and objects recursively.
+ *
+ * Throws {@link FormDataCoercionError} when the value cannot be coerced to
+ * the declared type. For nested structures the error includes a `path`
+ * indicating where the failure occurred.
+ *
+ * @param value - The raw value to coerce
+ * @param field - Optional descriptor declaring the target type
+ * @returns The coerced value
+ * @throws {FormDataCoercionError} When the value is invalid for the declared type
+ *
+ * @example
+ * ```ts
+ * coerceValue('42', { type: 'number' }) // 42
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceValue(['1', '2'], { type: 'array', item: { type: 'number' } })
+ * // [1, 2]
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceValue(
+ *   { name: 'Jane', age: '30' },
+ *   { type: 'object', fields: { name: { type: 'string' }, age: { type: 'number' } } },
+ * )
+ * // { name: 'Jane', age: 30 }
+ * ```
+ */
 function coerceValue(value: FormValue): FormValue
 function coerceValue<const F extends FieldDescriptor>(
   value: FormValue,

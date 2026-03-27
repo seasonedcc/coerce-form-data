@@ -7,6 +7,37 @@ import type {
   ObjectFieldDescriptor,
 } from './types'
 
+/**
+ * Coerce a typed value into a representation suitable for HTML form inputs.
+ *
+ * This is the reverse of {@link coerceValue}: it takes an already-typed
+ * JavaScript value and converts it into the string (or boolean) that an
+ * HTML input element expects. Works recursively for arrays and objects.
+ *
+ * @param value - The typed value to format
+ * @param field - Descriptor declaring the field type
+ * @returns A value ready to be used as a form input's default
+ *
+ * @example
+ * ```ts
+ * coerceToForm(42, { type: 'number' }) // '42'
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceToForm([1, 2], { type: 'array', item: { type: 'number' } })
+ * // ['1', '2']
+ * ```
+ *
+ * @example
+ * ```ts
+ * coerceToForm(
+ *   { name: 'Jane', age: 30 },
+ *   { type: 'object', fields: { name: { type: 'string' }, age: { type: 'number' } } },
+ * )
+ * // { name: 'Jane', age: '30' }
+ * ```
+ */
 function coerceToForm<const F extends FieldDescriptor>(
   value: unknown,
   field: F
